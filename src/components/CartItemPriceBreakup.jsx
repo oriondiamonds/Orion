@@ -9,6 +9,17 @@ export default function CartItemPriceBreakup({ item }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Use stored breakdown from add-to-cart if available (matches displayed price)
+    if (isOpen && !priceData) {
+      if (item.priceBreakdown) {
+        setPriceData(item.priceBreakdown);
+        return;
+      }
+
+      // Fallback: recalculate from HTML description
+      computePrice();
+    }
+
     async function computePrice() {
       if (!item.descriptionHtml) return;
       setLoading(true);
@@ -66,10 +77,6 @@ export default function CartItemPriceBreakup({ item }) {
       } finally {
         setLoading(false);
       }
-    }
-
-    if (isOpen && !priceData) {
-      computePrice();
     }
   }, [isOpen, item]);
 

@@ -48,6 +48,7 @@ export default function ProductDetails() {
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [totalPrice, setTotalPrice] = useState(null);
+  const [priceBreakdown, setPriceBreakdown] = useState(null);
   const { data: session } = useSession();
   const [thumbsLoaded, setThumbsLoaded] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
@@ -56,6 +57,7 @@ export default function ProductDetails() {
   const [engravingText, setEngravingText] = useState("");
   const handlePriceData = (data) => {
     setTotalPrice(data.totalPrice);
+    setPriceBreakdown(data);
   };
 
   const features = [
@@ -143,6 +145,7 @@ export default function ProductDetails() {
       currencyCode: selectedVariant.price.currencyCode,
       quantity: quantity,
       selectedOptions: finalSelectedOptions,
+      priceBreakdown: priceBreakdown || null,
     };
 
     // ----- MERGE LOGIC -----
