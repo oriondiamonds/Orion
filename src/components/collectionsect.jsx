@@ -18,23 +18,65 @@ export default function CollectionSection({ id, title, items = [] }) {
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [sortBy, setSortBy] = useState("price-low");
   const [priceRange, setPriceRange] = useState([0, 500000]);
+  const [karatFilter, setKaratFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const searchParams = useSearchParams();
   const initialPage = Number(searchParams.get("page")) || 1;
   const [currentPage, setCurrentPage] = useState(initialPage);
 
-  // Calculate min and max prices from items
-  const minPrice =
-    items.length > 0 ? Math.min(...items.map((item) => item.price)) : 0;
-  const maxPrice =
-    items.length > 0 ? Math.max(...items.map((item) => item.price)) : 500000;
+  // Extract unique gold karat values from all product variants
+  const availableKarats = (() => {
+    const karats = new Set();
+    items.forEach((item) => {
+      (item.allVariants || []).forEach((variant) => {
+        const karatOpt = (variant.selectedOptions || []).find(
+          (opt) => opt.name === "Gold Karat"
+        );
+        if (karatOpt) karats.add(karatOpt.value);
+      });
+    });
+    return [...karats].sort((a, b) => parseInt(a) - parseInt(b));
+  })();
 
-  // Initialize price range based on actual items
-  useEffect(() => {
-    if (items.length > 0) {
-      setPriceRange([minPrice, maxPrice]);
+  // Get the effective price for an item based on selected karat
+  const getItemPrice = (item) => {
+    if (karatFilter !== "all" && item.prices?.[karatFilter]) {
+      return item.prices[karatFilter];
     }
-  }, [items]);
+    return item.price;
+  };
+
+  // Filter items by karat availability
+  const karatFilteredItems =
+    karatFilter === "all"
+      ? items
+      : items.filter((item) =>
+          (item.allVariants || []).some((variant) =>
+            (variant.selectedOptions || []).some(
+              (opt) => opt.name === "Gold Karat" && opt.value === karatFilter
+            )
+          )
+        );
+
+  // Calculate min and max prices based on effective prices
+  const minPrice =
+    karatFilteredItems.length > 0
+      ? Math.min(...karatFilteredItems.map(getItemPrice))
+      : 0;
+  const maxPrice =
+    karatFilteredItems.length > 0
+      ? Math.max(...karatFilteredItems.map(getItemPrice))
+      : 500000;
+
+  // Reset price range when items or karat changes
+  useEffect(() => {
+    if (karatFilteredItems.length > 0) {
+      setPriceRange([
+        Math.min(...karatFilteredItems.map(getItemPrice)),
+        Math.max(...karatFilteredItems.map(getItemPrice)),
+      ]);
+    }
+  }, [items, karatFilter]);
 
   // Handle responsive page size
   useEffect(() => {
@@ -47,18 +89,19 @@ export default function CollectionSection({ id, title, items = [] }) {
     return () => window.removeEventListener("resize", updateItemsPerPage);
   }, []);
 
-  // Filter items by price range
-  const filteredItems = items.filter(
-    (item) => item.price >= priceRange[0] && item.price <= priceRange[1]
-  );
+  // Filter items by price range (using effective prices)
+  const filteredItems = karatFilteredItems.filter((item) => {
+    const price = getItemPrice(item);
+    return price >= priceRange[0] && price <= priceRange[1];
+  });
 
-  // Sort filtered items
+  // Sort filtered items (using effective prices)
   const sortedItems = [...filteredItems].sort((a, b) => {
     switch (sortBy) {
       case "price-low":
-        return a.price - b.price;
+        return getItemPrice(a) - getItemPrice(b);
       case "price-high":
-        return b.price - a.price;
+        return getItemPrice(b) - getItemPrice(a);
       default:
         return 0;
     }
@@ -83,17 +126,26 @@ export default function CollectionSection({ id, title, items = [] }) {
   // Reset to page 1 when filters/sort change
   useEffect(() => {
     setCurrentPage(initialPage);
-  }, [sortBy, priceRange]);
+  }, [sortBy, priceRange, karatFilter]);
 
   const handleResetFilters = () => {
     setSortBy("default");
     setPriceRange([minPrice, maxPrice]);
+    setKaratFilter("all");
   };
 
   const isFiltered =
     sortBy !== "default" ||
     priceRange[0] !== minPrice ||
-    priceRange[1] !== maxPrice;
+    priceRange[1] !== maxPrice ||
+    karatFilter !== "all";
+
+  const getProductUrl = (handle) => {
+    if (karatFilter !== "all") {
+      return `/product/${handle}?karat=${karatFilter}`;
+    }
+    return `/product/${handle}`;
+  };
 
   return (
     <section className="mt-12 mb-12 px-3 md:px-0">
@@ -137,6 +189,40 @@ export default function CollectionSection({ id, title, items = [] }) {
             <option value="price-high">Price: High to Low</option>
           </select>
         </div>
+
+        {/* Gold Karat Filter */}
+        {availableKarats.length > 0 && (
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-[#0a1833] mb-2">
+              Gold Karat
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setKaratFilter("all")}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  karatFilter === "all"
+                    ? "bg-[#0a1833] text-white"
+                    : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                All
+              </button>
+              {availableKarats.map((karat) => (
+                <button
+                  key={karat}
+                  onClick={() => setKaratFilter(karat)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    karatFilter === karat
+                      ? "bg-[#0a1833] text-white"
+                      : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  {karat}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Price Range */}
         <div className="flex-1">
@@ -192,7 +278,7 @@ export default function CollectionSection({ id, title, items = [] }) {
             <div
               key={idx}
               className="group relative bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2 hover:scale-[1.02] active:scale-[0.98]"
-              onClick={() => router.push(`/product/${item.handle}`)}
+              onClick={() => router.push(getProductUrl(item.handle))}
             >
               {/* Image Container */}
               <div className="relative overflow-hidden bg-gray-50 aspect-4/5 md:aspect-square">
@@ -208,7 +294,7 @@ export default function CollectionSection({ id, title, items = [] }) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(`/product/${item.handle}`);
+                      router.push(getProductUrl(item.handle));
                     }}
                     className="w-full bg-white text-[#0a1833] py-2 md:py-2.5 px-3 md:px-4 rounded-lg md:rounded-xl font-medium text-xs md:text-sm flex items-center justify-center gap-2 hover:bg-[#0a1833] hover:text-white transition-all duration-300 shadow-lg"
                   >
@@ -226,11 +312,13 @@ export default function CollectionSection({ id, title, items = [] }) {
 
                 {/* Price Display */}
                 <div className="mt-auto">
-                  <p className="text-xs md:text-sm text-gray-500 mb-1">
-                    Starting from (10K Gold)
-                  </p>
+                  {karatFilter !== "all" && (
+                    <p className="text-xs md:text-sm text-gray-500 mb-1">
+                      {karatFilter} Gold
+                    </p>
+                  )}
                   <p className="text-lg md:text-xl font-bold text-[#0a1833]">
-                    {formatINR(item.price)}
+                    {formatINR(getItemPrice(item))}
                   </p>
                 </div>
               </div>

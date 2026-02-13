@@ -1,7 +1,6 @@
 // Remove "use client" - this is now a Server Component
 import CollectionSection from "../../components/collectionsect";
-import { shopifyRequest } from "../../utils/shopify";
-import { GET_BRACELETS_COLLECTION } from "../../queries/bracelets_collection";
+import { getBraceletsCollection } from "../../queries/bracelets_collection";
 import { getSheetPricing } from "../../utils/sheetPricing";
 
 // Cache for 1 hour (3600 seconds)
@@ -41,10 +40,10 @@ async function transformBraceletsData(productsEdges) {
 
       const diamondDetails = extractDiamondDetails(product.description);
 
-      // Calculate actual price using your pricing logic
       const sheetPricing = await getSheetPricing();
       const handle = product.handle;
-      const price10K = sheetPricing[handle]?.price10K || 0;
+      const productPricing = sheetPricing[handle] || {};
+      const variantPrice = parseFloat(firstVariant?.price.amount || 0);
 
       return {
         productCode: firstVariant?.sku || "",
@@ -58,7 +57,12 @@ async function transformBraceletsData(productsEdges) {
           shape: diamondDetails.shape,
           count: diamondDetails.count,
         },
-        price: price10K,
+        price: productPricing.price10K || variantPrice,
+        prices: {
+          "10K": productPricing.price10K || variantPrice,
+          "14K": productPricing.price14K || variantPrice,
+          "18K": productPricing.price18K || variantPrice,
+        },
         currency: firstVariant?.price.currencyCode || "INR",
         image: product.featuredImage?.url || firstVariant?.image?.url || "",
         images:
@@ -76,9 +80,9 @@ async function transformBraceletsData(productsEdges) {
 
 export default async function BraceletsPage() {
   try {
-    const response = await shopifyRequest(GET_BRACELETS_COLLECTION);
+    const response = await getBraceletsCollection();
 
-    if (!response.data?.collection?.products?.edges) {
+    if (!response?.collection?.products?.edges) {
       return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-10 text-center text-red-600">
           <p>No bracelets found.</p>
@@ -87,7 +91,7 @@ export default async function BraceletsPage() {
     }
 
     const bracelets = await transformBraceletsData(
-      response.data.collection.products.edges
+      response.collection.products.edges
     );
 
     return (

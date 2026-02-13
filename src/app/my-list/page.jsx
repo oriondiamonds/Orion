@@ -2,20 +2,36 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Heart, ShoppingCart, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+  syncWishlistToServer,
+  loadWishlistFromServer,
+} from "../../utils/wishlistSync";
+import { syncCartToServer } from "../../utils/cartSync";
 
 export default function WishlistPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [wishlistItems, setWishlistItems] = useState([]);
 
   useEffect(() => {
+    // Load from localStorage first (instant), then refresh from server
     loadWishlist();
+    if (session?.user?.email) {
+      loadWishlistFromServer(session.user.email).then((items) => {
+        if (items && items.length > 0) {
+          setWishlistItems(items);
+        }
+      });
+    }
+
     const handleWishlistUpdate = () => loadWishlist();
     window.addEventListener("wishlistUpdated", handleWishlistUpdate);
     return () =>
       window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
-  }, []);
+  }, [session]);
 
   const loadWishlist = () => {
     const items = JSON.parse(localStorage.getItem("wishlist") || "[]");
@@ -28,6 +44,10 @@ export default function WishlistPage() {
     setWishlistItems(items);
     window.dispatchEvent(new Event("wishlistUpdated"));
     toast.success("Removed from wishlist");
+
+    if (session?.user?.email) {
+      syncWishlistToServer(session.user.email);
+    }
   };
 
   const clearWishlist = () => {
@@ -38,6 +58,10 @@ export default function WishlistPage() {
       setWishlistItems([]);
       window.dispatchEvent(new Event("wishlistUpdated"));
       toast.success("Wishlist cleared");
+
+      if (session?.user?.email) {
+        syncWishlistToServer(session.user.email);
+      }
     }
   };
 
@@ -69,6 +93,10 @@ export default function WishlistPage() {
     localStorage.setItem("cart", JSON.stringify(cart));
     window.dispatchEvent(new Event("cartUpdated"));
     removeFromWishlist(item.id);
+
+    if (session?.user?.email) {
+      syncCartToServer(session.user.email);
+    }
   };
 
   const goToProduct = (handle) => router.push(`/product/${handle}`);

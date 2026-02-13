@@ -1,65 +1,6 @@
 // src/app/api/cart/route.js
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
-
-// MongoDB connection
-let isConnected = false;
-
-async function connectDB() {
-  if (isConnected && mongoose.connection.readyState === 1) {
-    return;
-  }
-
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      bufferCommands: false,
-    });
-    isConnected = true;
-    console.log("✅ MongoDB connected");
-  } catch (error) {
-    console.error("❌ MongoDB connection error:", error);
-    throw error;
-  }
-}
-
-// Cart Schema - stores the actual cart items
-const CartSchema = new mongoose.Schema(
-  {
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-      lowercase: true,
-      trim: true,
-    },
-    items: [
-      {
-        variantId: { type: String, required: true },
-        handle: { type: String, required: true },
-        title: { type: String, required: true },
-        variantTitle: String,
-        image: String,
-        price: Number,
-        calculatedPrice: Number,
-        currencyCode: { type: String, default: "INR" },
-        quantity: { type: Number, required: true, min: 1 },
-        selectedOptions: [
-          {
-            name: String,
-            value: String,
-          },
-        ],
-        descriptionHtml: String,
-      },
-    ],
-  },
-  {
-    timestamps: true, // Adds createdAt and updatedAt
-  }
-);
-
-const Cart = mongoose.models.Cart || mongoose.model("Cart", CartSchema);
+import { supabaseAdmin } from "../../../utils/supabase-admin.js";
 
 /**
  * GET /api/cart?email=customer@email.com
@@ -67,8 +8,6 @@ const Cart = mongoose.models.Cart || mongoose.model("Cart", CartSchema);
  */
 export async function GET(request) {
   try {
-    await connectDB();
-
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
 
@@ -76,12 +15,28 @@ export async function GET(request) {
       return NextResponse.json({ error: "Email required" }, { status: 400 });
     }
 
-    const cart = await Cart.findOne({ email: email.toLowerCase() });
+    const { data, error } = await supabaseAdmin
+      .from("carts")
+      .select("items")
+      .eq("email", email.toLowerCase().trim())
+      .single();
 
+    // No cart found is not an error — return empty
+    if (error && error.code === "PGRST116") {
+      return NextResponse.json({
+        success: true,
+        items: [],
+        itemCount: 0,
+      });
+    }
+
+    if (error) throw error;
+
+    const items = data?.items || [];
     return NextResponse.json({
       success: true,
-      items: cart?.items || [],
-      itemCount: cart?.items?.length || 0,
+      items,
+      itemCount: items.length,
     });
   } catch (error) {
     console.error("Error fetching cart:", error);
@@ -98,8 +53,6 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
-    await connectDB();
-
     const { email, items } = await request.json();
 
     if (!email) {
@@ -131,23 +84,21 @@ export async function POST(request) {
       );
     }
 
-    // Upsert (update or insert) cart
-    const cart = await Cart.findOneAndUpdate(
-      { email: email.toLowerCase() },
-      {
-        email: email.toLowerCase(),
-        items: validItems,
-      },
-      {
-        upsert: true,
-        new: true,
-        runValidators: true,
-      }
-    );
+    const { error } = await supabaseAdmin
+      .from("carts")
+      .upsert(
+        {
+          email: email.toLowerCase().trim(),
+          items: validItems,
+        },
+        { onConflict: "email" }
+      );
+
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      itemCount: cart.items.length,
+      itemCount: validItems.length,
       message: "Cart saved successfully",
     });
   } catch (error) {
@@ -160,13 +111,11 @@ export async function POST(request) {
 }
 
 /**
- * PUT /api/cart/item
+ * PUT /api/cart
  * Add or update a single item in cart
  */
 export async function PUT(request) {
   try {
-    await connectDB();
-
     const { email, item } = await request.json();
 
     if (!email || !item) {
@@ -187,43 +136,52 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Invalid item data" }, { status: 400 });
     }
 
-    const cart = await Cart.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Fetch existing cart
+    const { data: cart, error: fetchError } = await supabaseAdmin
+      .from("carts")
+      .select("items")
+      .eq("email", normalizedEmail)
+      .single();
+
+    if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
     if (!cart) {
       // Create new cart with this item
-      const newCart = await Cart.create({
-        email: email.toLowerCase(),
-        items: [item],
-      });
+      const { error: insertError } = await supabaseAdmin
+        .from("carts")
+        .insert({ email: normalizedEmail, items: [item] });
+
+      if (insertError) throw insertError;
 
       return NextResponse.json({
         success: true,
-        itemCount: newCart.items.length,
+        itemCount: 1,
         message: "Item added to new cart",
       });
     }
 
-    // Check if item already exists
-    const existingItemIndex = cart.items.findIndex(
-      (i) => i.variantId === item.variantId
-    );
+    // Modify items array
+    const items = cart.items || [];
+    const existingIdx = items.findIndex((i) => i.variantId === item.variantId);
 
-    if (existingItemIndex > -1) {
-      // Update existing item
-      cart.items[existingItemIndex] = {
-        ...cart.items[existingItemIndex].toObject(),
-        ...item,
-      };
+    if (existingIdx > -1) {
+      items[existingIdx] = { ...items[existingIdx], ...item };
     } else {
-      // Add new item
-      cart.items.push(item);
+      items.push(item);
     }
 
-    await cart.save();
+    const { error: updateError } = await supabaseAdmin
+      .from("carts")
+      .update({ items })
+      .eq("email", normalizedEmail);
+
+    if (updateError) throw updateError;
 
     return NextResponse.json({
       success: true,
-      itemCount: cart.items.length,
+      itemCount: items.length,
       message: "Item added/updated successfully",
     });
   } catch (error) {
@@ -236,13 +194,11 @@ export async function PUT(request) {
 }
 
 /**
- * DELETE /api/cart?email=customer@email.com
- * Clear entire cart for customer
+ * DELETE /api/cart?email=customer@email.com&variantId=xyz
+ * Clear entire cart or remove a specific item
  */
 export async function DELETE(request) {
   try {
-    await connectDB();
-
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
     const variantId = searchParams.get("variantId");
@@ -251,28 +207,48 @@ export async function DELETE(request) {
       return NextResponse.json({ error: "Email required" }, { status: 400 });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     if (variantId) {
       // Remove specific item from cart
-      const cart = await Cart.findOne({ email: email.toLowerCase() });
+      const { data: cart, error: fetchError } = await supabaseAdmin
+        .from("carts")
+        .select("items")
+        .eq("email", normalizedEmail)
+        .single();
 
-      if (!cart) {
+      if (fetchError && fetchError.code === "PGRST116") {
         return NextResponse.json({
           success: true,
           message: "Cart not found",
         });
       }
+      if (fetchError) throw fetchError;
 
-      cart.items = cart.items.filter((item) => item.variantId !== variantId);
-      await cart.save();
+      const updatedItems = (cart.items || []).filter(
+        (item) => item.variantId !== variantId
+      );
+
+      const { error: updateError } = await supabaseAdmin
+        .from("carts")
+        .update({ items: updatedItems })
+        .eq("email", normalizedEmail);
+
+      if (updateError) throw updateError;
 
       return NextResponse.json({
         success: true,
-        itemCount: cart.items.length,
+        itemCount: updatedItems.length,
         message: "Item removed from cart",
       });
     } else {
       // Clear entire cart
-      await Cart.deleteOne({ email: email.toLowerCase() });
+      const { error: deleteError } = await supabaseAdmin
+        .from("carts")
+        .delete()
+        .eq("email", normalizedEmail);
+
+      if (deleteError) throw deleteError;
 
       return NextResponse.json({
         success: true,
@@ -289,13 +265,11 @@ export async function DELETE(request) {
 }
 
 /**
- * PATCH /api/cart/quantity
+ * PATCH /api/cart
  * Update item quantity
  */
 export async function PATCH(request) {
   try {
-    await connectDB();
-
     const { email, variantId, quantity } = await request.json();
 
     if (!email || !variantId || !quantity) {
@@ -312,22 +286,34 @@ export async function PATCH(request) {
       );
     }
 
-    const cart = await Cart.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email.toLowerCase().trim();
 
-    if (!cart) {
+    const { data: cart, error: fetchError } = await supabaseAdmin
+      .from("carts")
+      .select("items")
+      .eq("email", normalizedEmail)
+      .single();
+
+    if (fetchError && fetchError.code === "PGRST116") {
       return NextResponse.json({ error: "Cart not found" }, { status: 404 });
     }
+    if (fetchError) throw fetchError;
 
-    const itemIndex = cart.items.findIndex(
-      (item) => item.variantId === variantId
-    );
+    const items = cart.items || [];
+    const itemIndex = items.findIndex((item) => item.variantId === variantId);
 
     if (itemIndex === -1) {
       return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
 
-    cart.items[itemIndex].quantity = quantity;
-    await cart.save();
+    items[itemIndex].quantity = quantity;
+
+    const { error: updateError } = await supabaseAdmin
+      .from("carts")
+      .update({ items })
+      .eq("email", normalizedEmail);
+
+    if (updateError) throw updateError;
 
     return NextResponse.json({
       success: true,

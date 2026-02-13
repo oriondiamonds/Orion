@@ -1,83 +1,75 @@
+// src/app/account/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { GET_CUSTOMER_INFO } from "../../queries/customer";
-import { shopifyRequest } from "../../utils/shopify";
 
 export default function AccountPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [customer, setCustomer] = useState(null);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isGoogleAuth, setIsGoogleAuth] = useState(false);
 
   useEffect(() => {
-    checkAuthAndFetchData();
-  }, [status, session]);
+    if (status === "loading") return;
 
-  const checkAuthAndFetchData = async () => {
-    const expiresAt = localStorage.getItem("shopify_token_expires");
-    const token = localStorage.getItem("shopify_customer_token");
-
-    const isGoogle = status === "authenticated" && session && !token;
-    setIsGoogleAuth(isGoogle);
-
-    if (isGoogle) {
-      setCustomer({
-        firstName: session.user.name?.split(" ")[0] || "User",
-        lastName: session.user.name?.split(" ").slice(1).join(" ") || "",
-        displayName: session.user.name,
-        email: session.user.email,
-        image: session.user.image,
-        createdAt: new Date().toISOString(),
-        orders: { edges: [] },
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Check Shopify token authentication
-    if (!token || (expiresAt && new Date(expiresAt) < new Date())) {
-      localStorage.removeItem("shopify_customer_token");
-      localStorage.removeItem("shopify_token_expires");
-      localStorage.removeItem("customer_email");
+    if (status !== "authenticated" || !session?.user?.email) {
       router.push("/login");
       return;
     }
 
-    // Fetch Shopify customer data
+    fetchCustomerData(session.user.email);
+    fetchOrders(session.user.email);
+  }, [status, session, router]);
+
+  const fetchCustomerData = async (email) => {
     try {
-      const { data } = await shopifyRequest(GET_CUSTOMER_INFO, {
-        customerAccessToken: token,
-      });
-      if (data.customer) {
+      const res = await fetch(
+        `/api/auth/profile?email=${encodeURIComponent(email)}`
+      );
+
+      if (res.ok) {
+        const data = await res.json();
         setCustomer(data.customer);
       } else {
-        handleLogout();
+        // Fallback to session data if profile not found
+        setCustomer({
+          firstName: session.user.name?.split(" ")[0] || "User",
+          lastName: session.user.name?.split(" ").slice(1).join(" ") || "",
+          displayName: session.user.name,
+          email: session.user.email,
+          image: session.user.image,
+          createdAt: new Date().toISOString(),
+        });
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching profile:", err);
       setError("Failed to load account information");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    // Sign out from Google if using Google auth
-    if (isGoogleAuth) {
-      await signOut({ redirect: false });
-      localStorage.removeItem("google_auth");
+  const fetchOrders = async (email) => {
+    try {
+      const res = await fetch(
+        `/api/orders?email=${encodeURIComponent(email)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(data.orders || []);
+      }
+    } catch (err) {
+      console.error("Error fetching orders:", err);
     }
+  };
 
-    // Clear Shopify tokens
-    localStorage.removeItem("shopify_customer_token");
-    localStorage.removeItem("shopify_token_expires");
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
     localStorage.removeItem("customer_email");
-
     router.push("/login");
   };
 
@@ -105,7 +97,6 @@ export default function AccountPage() {
         <div className="bg-white shadow-lg rounded-2xl p-8 mb-10 border border-gray-100">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-4">
-              {/* Google Profile Picture */}
               {customer?.image && (
                 <img
                   src={customer.image}
@@ -118,9 +109,11 @@ export default function AccountPage() {
                   Welcome back, {customer?.firstName}!
                 </h1>
                 <p className="text-gray-600 mt-2">{customer?.email}</p>
-                {isGoogleAuth && (
+                {customer?.authProvider && customer.authProvider !== "email" && (
                   <span className="inline-block mt-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    Signed in with Google
+                    Signed in with{" "}
+                    {customer.authProvider.charAt(0).toUpperCase() +
+                      customer.authProvider.slice(1)}
                   </span>
                 )}
               </div>
@@ -203,8 +196,7 @@ export default function AccountPage() {
                 Order History
               </h2>
 
-              {!customer?.orders?.edges ||
-              customer.orders.edges.length === 0 ? (
+              {orders.length === 0 ? (
                 <div className="text-center py-12">
                   <svg
                     className="w-20 h-20 mx-auto text-gray-300 mb-4"
@@ -228,67 +220,53 @@ export default function AccountPage() {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-5">
-                  {customer.orders.edges.map(({ node: order }) => (
+                <div className="space-y-4">
+                  {orders.map((order) => (
                     <div
                       key={order.id}
-                      className="border border-gray-100 rounded-xl p-5 hover:shadow-lg transition"
+                      className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition"
                     >
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex justify-between items-start mb-3">
                         <div>
                           <p className="font-semibold text-lg">
                             Order #{order.orderNumber}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {new Date(order.processedAt).toLocaleDateString()}
+                            {new Date(order.createdAt).toLocaleDateString(
+                              "en-IN",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              }
+                            )}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold">
-                            {order.totalPrice.currencyCode}{" "}
-                            {parseFloat(order.totalPrice.amount).toFixed(2)}
-                          </p>
+                        <div className="flex items-center gap-3">
                           <span
-                            className={`text-xs px-3 py-1.5 rounded-full ${
-                              order.fulfillmentStatus === "FULFILLED"
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                              order.status === "paid"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-yellow-100 text-yellow-800"
                             }`}
                           >
-                            {order.fulfillmentStatus || "Pending"}
+                            {order.status === "paid" ? "Paid" : "Pending"}
                           </span>
+                          <p className="font-bold text-lg">
+                            {"\u20B9"}
+                            {Number(order.subtotal).toLocaleString("en-IN")}
+                          </p>
                         </div>
                       </div>
-
-                      {/* Order Items */}
-                      <div className="space-y-3">
-                        {order.lineItems.edges.map(({ node: item }) => (
-                          <div
-                            key={item.variant?.id}
-                            className="flex items-center space-x-4 text-sm border-t border-gray-100 pt-3"
-                          >
-                            {item.variant?.image && (
-                              <img
-                                src={item.variant.image.url}
-                                alt={item.variant.image.altText || item.title}
-                                className="w-14 h-14 object-cover rounded-lg shadow-sm"
-                              />
-                            )}
-                            <div className="flex-1">
-                              <p className="font-medium text-[#0a1833]">
-                                {item.title}
-                              </p>
-                              {item.variant?.title !== "Default Title" && (
-                                <p className="text-gray-500">
-                                  {item.variant?.title}
-                                </p>
-                              )}
-                            </div>
-                            <p className="text-gray-500">
-                              Qty: {item.quantity}
-                            </p>
-                          </div>
-                        ))}
+                      <div className="text-sm text-gray-600">
+                        <p>
+                          {order.items.length}{" "}
+                          {order.items.length === 1 ? "item" : "items"}
+                          {" \u2014 "}
+                          {order.items
+                            .map((item) => item.title)
+                            .join(", ")}
+                        </p>
                       </div>
                     </div>
                   ))}

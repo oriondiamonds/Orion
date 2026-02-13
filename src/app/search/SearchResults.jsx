@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
-import { shopifyRequest } from "../../utils/shopify";
-import { SEARCH_PRODUCTS } from "../../queries/search";
+import { searchProducts } from "../../queries/search";
 import { calculateFinalPrice } from "../../utils/price";
 import { formatIndianCurrency } from "../../utils/formatIndianCurrency";
 
@@ -88,15 +87,12 @@ export default function SearchResultsPage() {
   const performSearch = async () => {
     try {
       setLoading(true);
-      const response = await shopifyRequest(SEARCH_PRODUCTS, {
-        query,
-        first: 50,
-      });
+      const response = await searchProducts(query, 50);
 
-      if (response.data?.products?.edges) {
+      if (response?.products?.edges) {
         // Transform products with price calculation
         const transformedProducts = await Promise.all(
-          response.data.products.edges.map(async ({ node: product }) => {
+          response.products.edges.map(async ({ node: product }) => {
             const firstVariant = product.variants?.edges?.[0]?.node;
 
             // Calculate actual price using pricing logic

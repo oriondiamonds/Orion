@@ -56,7 +56,6 @@ export function cleanupCart() {
  */
 export function resetAllCartData() {
   localStorage.removeItem("cart");
-  localStorage.removeItem("shopify_cart_id");
   localStorage.removeItem("wishlist");
   console.log("All cart data cleared");
   window.dispatchEvent(new Event("cartUpdated"));

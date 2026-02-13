@@ -1,13 +1,12 @@
-// src/app/login/page.jsx - Fixed redirect loop
+// src/app/login/page.jsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import { CUSTOMER_CREATE, CUSTOMER_LOGIN } from "../../queries/customer";
-import { shopifyRequest } from "../../utils/shopify";
-import { mergeLocalAndMongoDBCart } from "../../utils/cartSync";
+import { mergeLocalAndServerCart } from "../../utils/cartSync";
+import { mergeLocalAndServerWishlist } from "../../utils/wishlistSync";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -16,7 +15,7 @@ export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const hasRedirectedRef = useRef(false); // 🔧 FIX: Prevent multiple redirects
+  const hasRedirectedRef = useRef(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -25,13 +24,10 @@ export default function LoginPage() {
     lastName: "",
   });
 
-  // 🔧 FIX: Only redirect once when Google auth completes
+  // Redirect when authenticated (Google OAuth or after credentials login)
   useEffect(() => {
     if (status === "authenticated" && session && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
-
-      // Don't call handleCartSync here - let CartSyncProvider handle it
-      // Just redirect to account
       toast.success("Logged in successfully!");
       router.push("/account");
     }
@@ -64,22 +60,28 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { data } = await shopifyRequest(CUSTOMER_CREATE, {
-        input: {
+      // Register via our API route
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           email: formData.email,
           password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
-        },
+        }),
       });
 
-      if (data.customerCreate.customerUserErrors.length > 0) {
-        setError(data.customerCreate.customerUserErrors[0].message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to create account");
         setLoading(false);
         return;
       }
 
       toast.success("Account created! Logging in...");
+      // Auto-login after registration
       await handleLogin(e, true);
     } catch (err) {
       console.error("Signup error:", err);
@@ -94,41 +96,37 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { data } = await shopifyRequest(CUSTOMER_LOGIN, {
-        input: {
-          email: formData.email,
-          password: formData.password,
-        },
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
       });
 
-      if (data.customerAccessTokenCreate.customerUserErrors.length > 0) {
-        setError(data.customerAccessTokenCreate.customerUserErrors[0].message);
+      if (result?.error) {
+        setError("Invalid email or password");
         setLoading(false);
         return;
       }
 
-      const { accessToken, expiresAt } =
-        data.customerAccessTokenCreate.customerAccessToken;
-
-      localStorage.setItem("shopify_customer_token", accessToken);
-      localStorage.setItem("shopify_token_expires", expiresAt);
+      // Store email for cart sync fallback
       localStorage.setItem("customer_email", formData.email);
 
-      // 🔧 FIX: Sync cart silently in background
-      toast.loading("Syncing your cart...");
+      // Sync cart and wishlist in background
+      toast.loading("Syncing your data...");
 
       try {
-        await mergeLocalAndMongoDBCart(formData.email);
+        await mergeLocalAndServerCart(formData.email);
+        await mergeLocalAndServerWishlist(formData.email);
         window.dispatchEvent(new Event("cartUpdated"));
+        window.dispatchEvent(new Event("wishlistUpdated"));
         toast.dismiss();
         toast.success("Logged in successfully!");
       } catch (syncError) {
-        console.error("Cart sync error:", syncError);
+        console.error("Sync error:", syncError);
         toast.dismiss();
         toast.success("Logged in successfully!");
       }
 
-      // 🔧 FIX: Redirect after a short delay
       setTimeout(() => {
         router.push("/account");
       }, 500);
@@ -138,9 +136,6 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
-
-  // 🔧 FIX: Don't show loading screen for Google auth
-  // Let the page render normally and handle redirect in useEffect
 
   return (
     <div className="relative min-h-screen mt-10 flex items-center justify-center bg-[#0a1833] overflow-hidden">

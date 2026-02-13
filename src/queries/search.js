@@ -1,38 +1,15 @@
-// src/queries/search.js
+import {
+  fetchSearchProducts,
+  transformProductData,
+} from "./supabase-helpers.js";
 
-export const SEARCH_PRODUCTS = `
-  query SearchProducts($query: String!, $first: Int!) {
-    products(first: $first, query: $query) {
-      edges {
-        node {
-          id
-          title
-          handle
-          description
-          priceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          variants(first: 1) {
-            edges {
-              node {
-                id
-                sku
-                price {
-                  amount
-                  currencyCode
-                }
-              }
-            }
-          }
-          featuredImage {
-            url
-            altText
-          }
-        }
-      }
-    }
-  }
-`;
+export async function searchProducts(query, first = 50) {
+  const products = await fetchSearchProducts(query, first);
+  return {
+    products: {
+      edges: products.map((p) => ({
+        node: transformProductData(p),
+      })),
+    },
+  };
+}

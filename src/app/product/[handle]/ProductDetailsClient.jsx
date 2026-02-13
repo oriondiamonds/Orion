@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   ShoppingCart,
   Heart,
@@ -19,17 +19,19 @@ import {
   ScrollText,
   BadgeCheck,
 } from "lucide-react";
-import { shopifyRequest } from "../../../utils/shopify";
-import { GET_PRODUCT_BY_HANDLE } from "../../../queries/products";
+import { getProductByHandle } from "../../../queries/products";
 import ProductAccordion from "../../../components/accordian";
 import toast from "react-hot-toast";
 import { formatINR } from "../../../utils/formatIndianCurrency";
 import { useSession } from "next-auth/react";
-import { syncCartToMongoDB } from "../../../utils/cartSync";
+import { syncCartToServer } from "../../../utils/cartSync";
+import { syncWishlistToServer } from "../../../utils/wishlistSync";
 
 export default function ProductDetails() {
   const modalRef = useRef(null);
   const { handle } = useParams();
+  const searchParams = useSearchParams();
+  const karatFromUrl = searchParams.get("karat");
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [selectedOptions, setSelectedOptions] = useState({});
@@ -189,10 +191,10 @@ export default function ProductDetails() {
 
     if (customerEmail) {
       try {
-        await syncCartToMongoDB(customerEmail);
-        console.log("✅ Cart synced to MongoDB instantly");
+        await syncCartToServer(customerEmail);
+        console.log("✅ Cart synced to server");
       } catch (err) {
-        console.error("MongoDB sync failed:", err);
+        console.error("Server cart sync failed:", err);
       }
     }
   };
@@ -278,10 +280,10 @@ export default function ProductDetails() {
 
     try {
       setLoading(true);
-      const response = await shopifyRequest(GET_PRODUCT_BY_HANDLE, { handle });
+      const response = await getProductByHandle(handle);
 
-      if (response.data?.product) {
-        const productData = response.data.product;
+      if (response?.product) {
+        const productData = response.product;
         setProduct(productData);
 
         setSelectedImage(
@@ -297,12 +299,25 @@ export default function ProductDetails() {
           )?.node || productData.variants.edges[0]?.node; // Fallback to first if Yellow Gold not found
 
         if (defaultVariant) {
-          setSelectedVariant(defaultVariant);
-
           const initialOptions = {};
           defaultVariant.selectedOptions.forEach((option) => {
             initialOptions[option.name] = option.value;
           });
+
+          // Override Gold Karat if passed from collection page
+          if (karatFromUrl && initialOptions["Gold Karat"]) {
+            initialOptions["Gold Karat"] = karatFromUrl;
+            const matchingVariant = productData.variants.edges.find(
+              ({ node }) =>
+                node.selectedOptions.every(
+                  (opt) => initialOptions[opt.name] === opt.value
+                )
+            )?.node;
+            setSelectedVariant(matchingVariant || defaultVariant);
+          } else {
+            setSelectedVariant(defaultVariant);
+          }
+
           setSelectedOptions(initialOptions);
         }
       }
@@ -356,6 +371,11 @@ export default function ProductDetails() {
       toast.success("Removed from wishlist");
 
       window.dispatchEvent(new Event("wishlistUpdated"));
+
+      // Sync to server if logged in
+      if (session?.user?.email) {
+        syncWishlistToServer(session.user.email);
+      }
     } else {
       if (!selectedVariant) {
         toast.error("Please select a variant");
@@ -381,6 +401,11 @@ export default function ProductDetails() {
       setIsWishlisted(true);
       toast.success("Added to wishlist!");
       window.dispatchEvent(new Event("wishlistUpdated"));
+
+      // Sync to server if logged in
+      if (session?.user?.email) {
+        syncWishlistToServer(session.user.email);
+      }
     }
   };
 
@@ -692,11 +717,11 @@ export default function ProductDetails() {
                 </div>
               )}
 
-              {/* Gold Carat Dropdown */}
+              {/* Gold Karat Dropdown */}
               {product.options.some((opt) => opt.name === "Gold Karat") && (
                 <div className="relative w-48">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Gold Carat
+                    Gold Karat
                   </label>
                   <select
                     className="w-full border border-gray-300 rounded-xl px-4 py-2 cursor-pointer"
@@ -705,7 +730,7 @@ export default function ProductDetails() {
                       handleOptionChange("Gold Karat", e.target.value)
                     }
                   >
-                    <option value="">Select Carat</option>
+                    <option value="">Select Karat</option>
                     {getOptionValues("Gold Karat").map((c) => (
                       <option key={c} value={c}>
                         {c}

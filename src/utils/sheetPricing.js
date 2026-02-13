@@ -1,4 +1,4 @@
-import Papa from "papaparse";
+import { supabase } from "./supabase.js";
 
 let pricingCache = null;
 let lastFetch = 0;
@@ -11,25 +11,21 @@ export async function getSheetPricing() {
     return pricingCache;
   }
 
-  const csvUrl =
-    "https://docs.google.com/spreadsheets/d/1Eb0AMDHBkZmjTqR8FNJZeul2krlD_DFKHuJvIVGqELQ/gviz/tq?tqx=out:csv&sheet=Extracted%20Prices";
+  const { data, error } = await supabase
+    .from("product_prices")
+    .select("handle, price_10k, price_14k, price_18k");
 
-  const res = await fetch(csvUrl);
-  const csv = await res.text();
+  if (error) {
+    console.error("Error fetching product_prices:", error.message);
+    return pricingCache || {};
+  }
 
-  const parsed = Papa.parse(csv, { header: true });
-  const rows = parsed.data;
-
-  // Build lookup table
   const map = {};
-
-  rows.forEach((row) => {
-    if (!row.Handle) return;
-
-    map[row.Handle.trim()] = {
-      price10K: Number(row["10K Price"] || 0),
-      price14K: Number(row["14K Price"] || 0),
-      price18K: Number(row["18K Price"] || 0),
+  (data || []).forEach((row) => {
+    map[row.handle] = {
+      price10K: Number(row.price_10k || 0),
+      price14K: Number(row.price_14k || 0),
+      price18K: Number(row.price_18k || 0),
     };
   });
 

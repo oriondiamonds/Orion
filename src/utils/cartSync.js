@@ -1,6 +1,6 @@
-// src/utils/cartSync.js - MongoDB Version
+// src/utils/cartSync.js - Server Cart Sync
 
-export async function syncCartToMongoDB(customerEmail) {
+export async function syncCartToServer(customerEmail) {
   try {
     const localCart = JSON.parse(localStorage.getItem("cart") || "[]");
 
@@ -23,7 +23,7 @@ export async function syncCartToMongoDB(customerEmail) {
       return { success: true, itemCount: 0 };
     }
 
-    // Save to MongoDB
+    // Save to server
     const response = await fetch("/api/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -38,19 +38,19 @@ export async function syncCartToMongoDB(customerEmail) {
     }
 
     const result = await response.json();
-    console.log(`✅ Synced ${result.itemCount} items to MongoDB`);
+    console.log(`✅ Synced ${result.itemCount} items to server`);
 
     return result;
   } catch (error) {
-    console.error("Error syncing cart to MongoDB:", error);
+    console.error("Error syncing cart to server:", error);
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Load cart from MongoDB on login
+ * Load cart from server on login
  */
-export async function loadCartFromMongoDB(customerEmail) {
+export async function loadCartFromServer(customerEmail) {
   try {
     const response = await fetch(
       `/api/cart?email=${encodeURIComponent(customerEmail)}`
@@ -63,25 +63,25 @@ export async function loadCartFromMongoDB(customerEmail) {
     const data = await response.json();
 
     if (!data.success || !data.items || data.items.length === 0) {
-      console.log("No cart items found in MongoDB");
+      console.log("No cart items found on server");
       return [];
     }
 
-    // Update local cart with MongoDB data
+    // Update local cart with server data
     localStorage.setItem("cart", JSON.stringify(data.items));
-    console.log(`✅ Loaded ${data.itemCount} items from MongoDB`);
+    console.log(`✅ Loaded ${data.itemCount} items from server`);
 
     return data.items;
   } catch (error) {
-    console.error("Error loading cart from MongoDB:", error);
+    console.error("Error loading cart from server:", error);
     return [];
   }
 }
 
 /**
- * Add single item to MongoDB cart
+ * Add single item to server cart
  */
-export async function addItemToMongoDBCart(customerEmail, item) {
+export async function addItemToServerCart(customerEmail, item) {
   try {
     const response = await fetch("/api/cart/item", {
       method: "PUT",
@@ -99,15 +99,15 @@ export async function addItemToMongoDBCart(customerEmail, item) {
     const result = await response.json();
     return result;
   } catch (error) {
-    console.error("Error adding item to MongoDB cart:", error);
+    console.error("Error adding item to server cart:", error);
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Update item quantity in MongoDB cart
+ * Update item quantity on server cart
  */
-export async function updateQuantityInMongoDB(
+export async function updateQuantityOnServer(
   customerEmail,
   variantId,
   quantity
@@ -130,15 +130,15 @@ export async function updateQuantityInMongoDB(
     const result = await response.json();
     return result;
   } catch (error) {
-    console.error("Error updating quantity in MongoDB:", error);
+    console.error("Error updating quantity on server:", error);
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Remove item from MongoDB cart
+ * Remove item from server cart
  */
-export async function removeItemFromMongoDB(customerEmail, variantId) {
+export async function removeItemFromServer(customerEmail, variantId) {
   try {
     const response = await fetch(
       `/api/cart?email=${encodeURIComponent(
@@ -156,15 +156,15 @@ export async function removeItemFromMongoDB(customerEmail, variantId) {
     const result = await response.json();
     return result;
   } catch (error) {
-    console.error("Error removing item from MongoDB:", error);
+    console.error("Error removing item from server:", error);
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Clear cart in MongoDB
+ * Clear cart on server
  */
-export async function clearMongoDBCart(customerEmail) {
+export async function clearServerCart(customerEmail) {
   try {
     const response = await fetch(
       `/api/cart?email=${encodeURIComponent(customerEmail)}`,
@@ -180,34 +180,34 @@ export async function clearMongoDBCart(customerEmail) {
     const result = await response.json();
     return result;
   } catch (error) {
-    console.error("Error clearing MongoDB cart:", error);
+    console.error("Error clearing server cart:", error);
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Merge local and MongoDB carts (keep highest quantity for duplicates)
+ * Merge local and server carts (keep highest quantity for duplicates)
  */
-export async function mergeLocalAndMongoDBCart(customerEmail) {
+export async function mergeLocalAndServerCart(customerEmail) {
   try {
     const localCart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-    // Get MongoDB cart
-    const mongoResponse = await fetch(
+    // Get server cart
+    const serverResponse = await fetch(
       `/api/cart?email=${encodeURIComponent(customerEmail)}`
     );
-    const mongoData = await mongoResponse.json();
-    const mongoCart = mongoData.items || [];
+    const serverData = await serverResponse.json();
+    const serverCart = serverData.items || [];
 
-    if (localCart.length === 0 && mongoCart.length === 0) {
+    if (localCart.length === 0 && serverCart.length === 0) {
       return [];
     }
 
     // Merge carts - keep highest quantity for duplicates
     const mergedMap = new Map();
 
-    // Add MongoDB items first
-    mongoCart.forEach((item) => {
+    // Add server items first
+    serverCart.forEach((item) => {
       mergedMap.set(item.variantId, item);
     });
 
@@ -226,7 +226,7 @@ export async function mergeLocalAndMongoDBCart(customerEmail) {
 
     const mergedCart = Array.from(mergedMap.values());
 
-    // Save merged cart to MongoDB
+    // Save merged cart to server
     await fetch("/api/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

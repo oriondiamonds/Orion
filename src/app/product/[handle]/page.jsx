@@ -1,12 +1,11 @@
-import { shopifyRequest } from "../../../utils/shopify";
-import { GET_PRODUCT_BY_HANDLE } from "../../../queries/products";
+import { getProductByHandle } from "../../../queries/products";
 import ProductDetailsClient from "./ProductDetailsClient";
 
 export async function generateMetadata({ params }) {
   const { handle } = await params; // ← Add this await
 
-  const response = await shopifyRequest(GET_PRODUCT_BY_HANDLE, { handle });
-  const product = response?.data?.product;
+  const response = await getProductByHandle(handle);
+  const product = response?.product;
 
   if (!product) {
     return {

@@ -1,7 +1,6 @@
 // app/rings/page.jsx
 import CollectionSection from "../../components/collectionsect";
-import { shopifyRequest } from "../../utils/shopify";
-import { GET_RINGS_COLLECTION } from "../../queries/collections";
+import { getRingsCollection } from "../../queries/collections";
 import { getSheetPricing } from "../../utils/sheetPricing";
 
 // Cache for 1 hour
@@ -43,7 +42,8 @@ async function transformRingsData(productsEdges) {
 
       const sheetPricing = await getSheetPricing();
       const handle = product.handle;
-      const price10K = sheetPricing[handle]?.price10K || 0;
+      const productPricing = sheetPricing[handle] || {};
+      const variantPrice = parseFloat(firstVariant?.price.amount || 0);
 
       return {
         productCode: firstVariant?.sku || "",
@@ -57,7 +57,12 @@ async function transformRingsData(productsEdges) {
           shape: diamondDetails.shape,
           count: diamondDetails.count,
         },
-        price: price10K,
+        price: productPricing.price10K || variantPrice,
+        prices: {
+          "10K": productPricing.price10K || variantPrice,
+          "14K": productPricing.price14K || variantPrice,
+          "18K": productPricing.price18K || variantPrice,
+        },
         currency: firstVariant?.price.currencyCode || "INR",
         image: product.featuredImage?.url || firstVariant?.image?.url || "",
         images:
@@ -90,9 +95,9 @@ async function transformRingsData(productsEdges) {
 
 export default async function RingsPage() {
   try {
-    const response = await shopifyRequest(GET_RINGS_COLLECTION);
+    const response = await getRingsCollection();
 
-    if (!response.data?.collection?.products?.edges) {
+    if (!response?.collection?.products?.edges) {
       return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-10 text-center text-red-600">
           <p>No rings found.</p>
@@ -101,7 +106,7 @@ export default async function RingsPage() {
     }
 
     const rings = await transformRingsData(
-      response.data.collection.products.edges
+      response.collection.products.edges
     );
 
     return (

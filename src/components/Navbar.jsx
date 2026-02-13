@@ -13,8 +13,7 @@ import {
   FiPhone,
 } from "react-icons/fi";
 import { Loader, X } from "lucide-react";
-import { shopifyRequest } from "../utils/shopify";
-import { SEARCH_PRODUCTS } from "../queries/search";
+import { searchProducts } from "../queries/search";
 
 export function Navbar() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -78,11 +77,8 @@ export function Navbar() {
   const performSearch = async (query) => {
     try {
       setIsSearching(true);
-      const response = await shopifyRequest(SEARCH_PRODUCTS, {
-        query,
-        first: 10,
-      });
-      const edges = response.data?.products?.edges || [];
+      const response = await searchProducts(query, 10);
+      const edges = response?.products?.edges || [];
       setSearchResults(edges);
       setShowResults(edges.length > 0);
     } catch (err) {
@@ -290,15 +286,23 @@ export function Navbar() {
             onClick={() => router.push("/account")}
           />
 
-          {/* === MOBILE: CALL + HAMBURGER ONLY === */}
+          {/* === MOBILE: CART + HAMBURGER === */}
           <div className="md:hidden flex items-center gap-3">
-            {/* Mobile Call Icon */}
-            <a
-              href="tel:+917022253092"
-              className="flex items-center justify-center text-white hover:text-yellow-400 transition"
+            {/* Mobile Cart Icon */}
+            <div
+              className="relative cursor-pointer"
+              onClick={() => router.push("/my-cart")}
             >
-              <FiPhone size={20} />
-            </a>
+              <FiShoppingCart
+                size={20}
+                className="text-white hover:text-yellow-400 transition"
+              />
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-yellow-500 text-[#0a1833] text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                  {cartCount}
+                </span>
+              )}
+            </div>
 
             {/* Hamburger Menu Toggle */}
             {mobileMenuOpen ? (
@@ -411,25 +415,14 @@ export function Navbar() {
               <span className="text-xs">Search</span>
             </div>
 
-            {/* Cart Icon */}
-            <div
-              className="flex flex-col items-center gap-1 relative cursor-pointer"
-              onClick={() => {
-                router.push("/my-cart");
-                setMobileMenuOpen(false);
-              }}
+            {/* Phone Icon */}
+            <a
+              href="tel:+917022253092"
+              className="flex flex-col items-center gap-1 cursor-pointer text-white hover:text-yellow-400 transition"
             >
-              <FiShoppingCart
-                size={22}
-                className="text-white hover:text-yellow-400 transition"
-              />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-2 bg-yellow-500 text-[#0a1833] text-[10px] font-bold rounded-full px-1.5 py-0.5">
-                  {cartCount}
-                </span>
-              )}
-              <span className="text-xs">Cart</span>
-            </div>
+              <FiPhone size={22} />
+              <span className="text-xs">Call Us</span>
+            </a>
 
             {/* Wishlist Icon */}
             <div

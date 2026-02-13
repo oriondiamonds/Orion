@@ -1,11 +1,7 @@
 // src/app/api/pricing-config/reset/route.js
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
+import { supabaseAdmin } from "../../../../utils/supabase-admin.js";
 
-const CONFIG_FILE = path.join(process.cwd(), "pricing-config.json");
-
-// Get admin password with proper fallback
 const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "changeme123").trim();
 
 // Default configuration
@@ -40,14 +36,7 @@ const DEFAULT_CONFIG = {
     description: "Final making charge is multiplied by 1.75",
   },
   gstRate: 0.03,
-  lastUpdated: new Date().toISOString(),
-  updatedBy: "system",
 };
-
-// Write config
-async function saveConfig(config) {
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
-}
 
 // POST - Reset configuration to defaults (protected)
 export async function POST(request) {
@@ -58,7 +47,6 @@ export async function POST(request) {
     console.log("=== RESET CONFIG ===");
     console.log("Password received:", password ? "***" : "EMPTY");
 
-    // Verify password exists
     if (!password) {
       return NextResponse.json(
         { error: "Password is required" },
@@ -66,7 +54,6 @@ export async function POST(request) {
       );
     }
 
-    // Verify admin password
     const receivedPassword = String(password).trim();
     if (receivedPassword !== ADMIN_PASSWORD) {
       console.log("❌ Password mismatch!");
@@ -78,20 +65,42 @@ export async function POST(request) {
 
     console.log("✅ Password verified, resetting to defaults");
 
-    // Create reset config with metadata
-    const resetConfig = {
-      ...DEFAULT_CONFIG,
-      lastUpdated: new Date().toISOString(),
-      updatedBy: updatedBy || "admin (reset)",
-    };
+    // Get the singleton row ID
+    const { data: existing, error: fetchError } = await supabaseAdmin
+      .from("pricing_config")
+      .select("id")
+      .limit(1)
+      .single();
 
-    await saveConfig(resetConfig);
+    if (fetchError) throw fetchError;
+
+    const now = new Date().toISOString();
+    const resetUpdatedBy = updatedBy || "admin (reset)";
+
+    // Update to defaults
+    const { error: updateError } = await supabaseAdmin
+      .from("pricing_config")
+      .update({
+        diamond_margins: DEFAULT_CONFIG.diamondMargins,
+        making_charges: DEFAULT_CONFIG.makingCharges,
+        gst_rate: DEFAULT_CONFIG.gstRate,
+        last_updated: now,
+        updated_by: resetUpdatedBy,
+      })
+      .eq("id", existing.id);
+
+    if (updateError) throw updateError;
+
     console.log("✅ Config reset to defaults");
 
     return NextResponse.json({
       success: true,
       message: "Configuration reset to defaults",
-      config: resetConfig,
+      config: {
+        ...DEFAULT_CONFIG,
+        lastUpdated: now,
+        updatedBy: resetUpdatedBy,
+      },
     });
   } catch (error) {
     console.error("Error resetting config:", error);

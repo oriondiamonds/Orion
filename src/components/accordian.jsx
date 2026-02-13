@@ -57,7 +57,7 @@ function DiamondDetails({ descriptionHtml }) {
         weights.length,
         numbers.length,
         totalWeights.length,
-        dimensions.length
+        dimensions.length,
       );
 
       const rows = Array.from({ length: rowCount }, (_, i) => ({
@@ -121,6 +121,7 @@ function ProductSpecs({
   selectedOptions,
   selectedVariant,
   options,
+  pricing,
 }) {
   const [specs, setSpecs] = useState([]);
   const [goldWeight, setGoldWeight] = useState(null);
@@ -147,17 +148,25 @@ function ProductSpecs({
 
     // ✅ Determine selected gold karat (e.g., "10K", "14K", etc.)
     const selectedKarat = selectedOptions["Gold Karat"] || "";
+    const karatNum = parseInt(selectedKarat);
 
-    // ✅ Extract correct karat weight key (e.g., "14K Gold" or "14K Weight")
-    const weightKey =
-      Object.keys(specMap).find(
-        (key) =>
-          key.toLowerCase().includes(selectedKarat.toLowerCase()) &&
-          key.toLowerCase().includes("gold")
-      ) || null;
+    // ✅ Prefer synced weight from product_prices, fallback to description HTML
+    const syncedWeight = pricing && pricing[`weight_${karatNum}k`]
+      ? `${pricing[`weight_${karatNum}k`]}g`
+      : null;
 
-    // ✅ Save only the selected karat’s weight
-    setGoldWeight(weightKey ? specMap[weightKey] : null);
+    if (syncedWeight) {
+      setGoldWeight(syncedWeight);
+    } else {
+      // Fallback: extract from description HTML
+      const weightKey =
+        Object.keys(specMap).find(
+          (key) =>
+            key.toLowerCase().includes(selectedKarat.toLowerCase()) &&
+            key.toLowerCase().includes("gold"),
+        ) || null;
+      setGoldWeight(weightKey ? specMap[weightKey] : null);
+    }
 
     // ✅ Exclude all karat weights regardless of selected one
     const excludeKeys = [
@@ -199,7 +208,7 @@ function ProductSpecs({
           !(
             spec.key.toLowerCase().includes("gold") &&
             spec.key.toLowerCase().match(/\d{1,2}k/)
-          ) // remove any key with “9k”, “10k”, etc.
+          ), // remove any key with “9k”, “10k”, etc.
       );
 
     // ✅ Add size/dimensions (only if they have values)
@@ -215,7 +224,7 @@ function ProductSpecs({
     });
 
     setSpecs(parsedSpecs);
-  }, [descriptionHtml, selectedOptions]);
+  }, [descriptionHtml, selectedOptions, pricing]);
 
   if (!specs.length && !goldWeight) return <p>No product details available.</p>;
 
@@ -294,6 +303,7 @@ export default function ProductAccordion({
           selectedOptions={selectedOptions}
           selectedVariant={selectedVariant}
           options={product.options}
+          pricing={product.pricing}
         />
       ),
     },
@@ -305,6 +315,7 @@ export default function ProductAccordion({
           descriptionHtml={product.descriptionHtml}
           selectedOptions={selectedOptions}
           onPriceData={onPriceData}
+          pricing={product.pricing}
         />
       ),
     },
@@ -320,7 +331,7 @@ export default function ProductAccordion({
           </p>
           <p className="text-gray-600 flex items-center gap-2">
             <CircleCheckBig className="w-4 h-4 shrink-0" />
-            Delivery in 7-14 business days
+            Delivery in 15-21 days at your doorstep
           </p>
           <p className="text-gray-600 flex items-center gap-2">
             <CircleCheckBig className="w-4 h-4 shrink-0" />
