@@ -37,13 +37,13 @@ export default function PriceBreakup({
             console.warn("Gold price fetch failed, using fallback");
           }
 
-          const goldPrice = Math.round(gold24Price * (karatNum / 24) * weightK);
+          const rawGoldPrice = gold24Price * (karatNum / 24) * weightK;
+          const rawMakingCharge =
+            (weightK >= 2 ? weightK * 700 : weightK * 950) * 1.75;
 
-          const makingCharge = Math.round(
-            (weightK >= 2 ? weightK * 700 : weightK * 950) * 1.75
-          );
-
-          const subtotal = diamondPrice + goldPrice + makingCharge;
+          const subtotal = Math.round(diamondPrice + rawGoldPrice + rawMakingCharge);
+          const goldPrice = Math.round(rawGoldPrice);
+          const makingCharge = Math.round(rawMakingCharge);
           const gst = Math.round(subtotal * 0.03);
           const totalPrice = subtotal + gst;
 
