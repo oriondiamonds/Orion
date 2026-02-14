@@ -514,8 +514,24 @@ export default function CartPage() {
             if (verifyData.success) {
               // Clear local cart after successful payment
               localStorage.setItem("cart", JSON.stringify([]));
+              markCartLocallyModified();
               window.dispatchEvent(new Event("cartUpdated"));
               setCartItems([]);
+
+              // Also clear the server-side cart so it doesn't re-populate on reload
+              try {
+                const email = customerEmail || localStorage.getItem("customer_email");
+                if (email) {
+                  await clearServerCart(email);
+                  // clear the local-change marker since server now matches client
+                  try {
+                    const { clearCartLocalChange } = await import("../../utils/cartCleanup");
+                    clearCartLocalChange();
+                  } catch (e) {}
+                }
+              } catch (e) {
+                console.error("Failed to clear server cart after payment:", e);
+              }
 
               toast.success("Payment successful!");
               const confirmUrl = `/order-confirmation?order=${verifyData.orderNumber}` +
