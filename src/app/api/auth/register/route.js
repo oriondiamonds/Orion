@@ -5,7 +5,8 @@ import { supabaseAdmin } from "../../../../utils/supabase-admin.js";
 
 export async function POST(request) {
   try {
-    const { email, password, firstName, lastName } = await request.json();
+    const { email, password, firstName, lastName, utmData } =
+      await request.json();
 
     if (!email || !password) {
       return NextResponse.json(
@@ -53,6 +54,40 @@ export async function POST(request) {
       });
 
     if (insertError) throw insertError;
+
+    // Record UTM tracking for signup (never blocks registration)
+    try {
+      if (
+        utmData &&
+        (utmData.utm_source || utmData.utm_campaign || utmData.utm_medium)
+      ) {
+        const normalizedEmail = email.toLowerCase().trim();
+
+        await supabaseAdmin.from("referral_tracking").insert({
+          customer_email: normalizedEmail,
+          event_type: "signup",
+          auth_provider: "email",
+          utm_source: utmData.utm_source || null,
+          utm_medium: utmData.utm_medium || null,
+          utm_campaign: utmData.utm_campaign || null,
+          utm_content: utmData.utm_content || null,
+          utm_term: utmData.utm_term || null,
+          landing_url: utmData.landing_url || null,
+          referrer_url: utmData.referrer_url || null,
+        });
+
+        await supabaseAdmin
+          .from("customers")
+          .update({
+            utm_source: utmData.utm_source || null,
+            utm_medium: utmData.utm_medium || null,
+            utm_campaign: utmData.utm_campaign || null,
+          })
+          .eq("email", normalizedEmail);
+      }
+    } catch (utmError) {
+      console.error("UTM tracking error (non-blocking):", utmError);
+    }
 
     return NextResponse.json({
       success: true,

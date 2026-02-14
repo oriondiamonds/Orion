@@ -4,7 +4,56 @@ import GoogleProvider from "next-auth/providers/google";
 import InstagramProvider from "next-auth/providers/instagram";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "../../../../utils/supabase-admin.js";
+
+// Helper to read UTM data from cookie and record tracking event
+async function recordOAuthUtm(email, authProvider) {
+  try {
+    const cookieStore = await cookies();
+    const utmCookie = cookieStore.get("orion_utm");
+    if (!utmCookie?.value) return;
+
+    const utmData = JSON.parse(utmCookie.value);
+    if (!utmData.utm_source && !utmData.utm_campaign && !utmData.utm_medium)
+      return;
+
+    // Check if customer was just created (within last 10s = signup, else login)
+    const { data: customer } = await supabaseAdmin
+      .from("customers")
+      .select("created_at")
+      .eq("email", email)
+      .single();
+
+    const isNewSignup =
+      customer &&
+      Date.now() - new Date(customer.created_at).getTime() < 10000;
+
+    await supabaseAdmin.from("referral_tracking").insert({
+      customer_email: email,
+      event_type: isNewSignup ? "signup" : "login",
+      auth_provider: authProvider,
+      utm_source: utmData.utm_source || null,
+      utm_medium: utmData.utm_medium || null,
+      utm_campaign: utmData.utm_campaign || null,
+      utm_content: utmData.utm_content || null,
+      utm_term: utmData.utm_term || null,
+      landing_url: utmData.landing_url || null,
+      referrer_url: null,
+    });
+
+    await supabaseAdmin
+      .from("customers")
+      .update({
+        utm_source: utmData.utm_source || null,
+        utm_medium: utmData.utm_medium || null,
+        utm_campaign: utmData.utm_campaign || null,
+      })
+      .eq("email", email);
+  } catch (utmError) {
+    console.error("OAuth UTM tracking error (non-blocking):", utmError);
+  }
+}
 
 const handler = NextAuth({
   providers: [
@@ -89,6 +138,9 @@ const handler = NextAuth({
             { onConflict: "email" }
           );
 
+          // Record UTM tracking for Google OAuth
+          await recordOAuthUtm(email, "google");
+
           return true;
         } catch (error) {
           console.error("Error upserting Google customer:", error);
@@ -104,9 +156,10 @@ const handler = NextAuth({
           const displayName = user.name || email;
 
           // Upsert customer into Supabase
+          const normalizedEmail = email.toLowerCase().trim();
           await supabaseAdmin.from("customers").upsert(
             {
-              email: email.toLowerCase().trim(),
+              email: normalizedEmail,
               first_name: firstName,
               last_name: lastName,
               display_name: displayName,
@@ -115,6 +168,9 @@ const handler = NextAuth({
             },
             { onConflict: "email" }
           );
+
+          // Record UTM tracking for Instagram OAuth
+          await recordOAuthUtm(normalizedEmail, "instagram");
 
           return true;
         } catch (error) {

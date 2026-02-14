@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { mergeLocalAndServerCart } from "../../utils/cartSync";
 import { mergeLocalAndServerWishlist } from "../../utils/wishlistSync";
+import { getUtmFromCookie, clearUtmCookie } from "../../utils/utm";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -23,6 +24,16 @@ export default function LoginPage() {
     firstName: "",
     lastName: "",
   });
+  const [utmData, setUtmData] = useState(null);
+
+  // Read UTM data from cookie on mount
+  useEffect(() => {
+    const utm = getUtmFromCookie();
+    if (utm) {
+      utm.referrer_url = document.referrer || null;
+      setUtmData(utm);
+    }
+  }, []);
 
   // Redirect when authenticated (Google OAuth or after credentials login)
   useEffect(() => {
@@ -69,6 +80,7 @@ export default function LoginPage() {
           password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
+          utmData,
         }),
       });
 
@@ -110,6 +122,21 @@ export default function LoginPage() {
 
       // Store email for cart sync fallback
       localStorage.setItem("customer_email", formData.email);
+
+      // Track UTM for credentials login (fire and forget)
+      if (utmData) {
+        fetch("/api/auth/track-utm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email,
+            eventType: "login",
+            authProvider: "email",
+            utmData,
+          }),
+        }).catch(() => {});
+        clearUtmCookie();
+      }
 
       // Sync cart and wishlist in background
       toast.loading("Syncing your data...");

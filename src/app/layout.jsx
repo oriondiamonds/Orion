@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { Providers } from "./providers";
 import { FaWhatsapp } from "react-icons/fa6";
 import CartSyncProvider from "../components/CartSyncProvider";
+import UtmVisitTracker from "../components/UtmVisitTracker";
 
 export const metadata = {
   title: "Orion Diamonds",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }) {
         <Toaster position="bottom-center" />
 
         <Providers>
+          <UtmVisitTracker />
           <CartSyncProvider>{children}</CartSyncProvider>
         </Providers>
 
