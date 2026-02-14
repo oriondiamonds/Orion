@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "../../../../utils/supabase-admin.js";
 
 const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "changeme123").trim();
 
 function verifyPassword(password) {
   return password && String(password).trim() === ADMIN_PASSWORD;
+}
+
+function revalidateCollectionPaths() {
+  try {
+    revalidatePath("/rings");
+    revalidatePath("/earrings");
+    revalidatePath("/pendants");
+    revalidatePath("/bracelets");
+    revalidatePath("/");
+  } catch (e) {
+    console.warn("Revalidation error:", e.message);
+  }
 }
 
 function slugify(text) {
@@ -309,6 +322,9 @@ export async function POST(request) {
         console.error("Collection assignment error:", cpError.message);
     }
 
+    // Revalidate collection pages so new product appears immediately
+    revalidateCollectionPaths();
+
     return NextResponse.json({ success: true, product: newProduct });
   } catch (error) {
     console.error("Error creating product:", error);
@@ -504,6 +520,9 @@ export async function PUT(request) {
       .eq("id", id)
       .single();
 
+    // Revalidate collection pages so changes appear immediately
+    revalidateCollectionPaths();
+
     return NextResponse.json({ success: true, product: updated });
   } catch (error) {
     console.error("Error updating product:", error);
@@ -575,6 +594,8 @@ export async function DELETE(request) {
     } catch (storageErr) {
       console.warn("Storage cleanup error:", storageErr.message);
     }
+
+    revalidateCollectionPaths();
 
     return NextResponse.json({
       success: true,
