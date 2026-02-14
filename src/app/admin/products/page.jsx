@@ -16,6 +16,7 @@ import {
   Image as ImageIcon,
   ArrowUpDown,
   Filter,
+  FolderOpen,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -28,6 +29,7 @@ const EMPTY_PRODUCT = {
   options: [],
   variants: [],
   pricing: null,
+  collection_ids: [],
 };
 
 const EMPTY_PRICING = {
@@ -85,12 +87,15 @@ export default function AdminProductsPage() {
   // Collapsible sections
   const [openSections, setOpenSections] = useState({
     basic: true,
+    collections: true,
     html: false,
     images: true,
     options: true,
     variants: true,
     pricing: false,
   });
+  const [newCollectionTitle, setNewCollectionTitle] = useState("");
+  const [creatingCollection, setCreatingCollection] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -141,9 +146,12 @@ export default function AdminProductsPage() {
       options: [],
       variants: [],
       pricing: null,
+      collection_ids: [],
     });
+    setNewCollectionTitle("");
     setOpenSections({
       basic: true,
+      collections: true,
       html: false,
       images: true,
       options: true,
@@ -213,9 +221,12 @@ export default function AdminProductsPage() {
               price_18k: p.pricing.price_18k || "",
             }
           : null,
+        collection_ids: p.collection_ids || [],
       });
+      setNewCollectionTitle("");
       setOpenSections({
         basic: true,
+        collections: true,
         html: false,
         images: true,
         options: true,
@@ -267,6 +278,7 @@ export default function AdminProductsPage() {
           selected_options: v.selected_options || [],
         })),
         pricing: formData.pricing || undefined,
+        collection_ids: formData.collection_ids || [],
       };
 
       let res;
@@ -303,6 +315,38 @@ export default function AdminProductsPage() {
       showMessage("error", "Failed to save product");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateCollection = async () => {
+    const title = newCollectionTitle.trim();
+    if (!title || !password) return;
+
+    setCreatingCollection(true);
+    try {
+      const res = await fetch("/api/admin/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password, title }),
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        toast.error(data.error);
+      } else {
+        const newCol = data.collection;
+        setCollections((prev) => [...prev, newCol].sort((a, b) => a.title.localeCompare(b.title)));
+        setFormData((prev) => ({
+          ...prev,
+          collection_ids: [...(prev.collection_ids || []), newCol.id],
+        }));
+        setNewCollectionTitle("");
+        toast.success(`Collection "${newCol.title}" created`);
+      }
+    } catch {
+      toast.error("Failed to create collection");
+    } finally {
+      setCreatingCollection(false);
     }
   };
 
@@ -734,6 +778,82 @@ export default function AdminProductsPage() {
                       placeholder="Brief product description..."
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* --- Collections --- */}
+            <div className="border-b border-gray-200">
+              <SectionHeader
+                sectionKey="collections"
+                title="COLLECTIONS"
+                count={formData.collection_ids?.length || 0}
+              />
+              {openSections.collections && (
+                <div className="pb-4 space-y-3">
+                  {collections.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {collections.map((c) => (
+                        <label
+                          key={c.id}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${
+                            (formData.collection_ids || []).includes(c.id)
+                              ? "border-blue-500 bg-blue-50 text-blue-700"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={(formData.collection_ids || []).includes(
+                              c.id
+                            )}
+                            onChange={(e) => {
+                              const ids = formData.collection_ids || [];
+                              setFormData({
+                                ...formData,
+                                collection_ids: e.target.checked
+                                  ? [...ids, c.id]
+                                  : ids.filter((id) => id !== c.id),
+                              });
+                            }}
+                            className="rounded border-gray-300 text-blue-600"
+                          />
+                          <FolderOpen size={14} className="text-gray-400" />
+                          {c.title}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      No collections yet. Create one below.
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={newCollectionTitle}
+                      onChange={(e) => setNewCollectionTitle(e.target.value)}
+                      placeholder="New collection name..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleCreateCollection();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={
+                        creatingCollection || !newCollectionTitle.trim()
+                      }
+                      onClick={handleCreateCollection}
+                      className="px-4 py-2 bg-[#0a1833] text-white rounded-lg text-sm hover:bg-[#1a2843] disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <Plus size={14} />
+                      {creatingCollection ? "Adding..." : "Add"}
+                    </button>
                   </div>
                 </div>
               )}

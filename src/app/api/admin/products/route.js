@@ -57,6 +57,13 @@ export async function GET(request) {
 
       product.pricing = pricing || null;
 
+      // Fetch collection assignments
+      const { data: cpRows } = await supabaseAdmin
+        .from("collection_products")
+        .select("collection_id")
+        .eq("product_id", detailId);
+      product.collection_ids = (cpRows || []).map((r) => r.collection_id);
+
       return NextResponse.json({ success: true, product });
     }
 
@@ -286,6 +293,22 @@ export async function POST(request) {
         console.error("Pricing upsert error:", pricingError.message);
     }
 
+    // 6. Insert collection assignments
+    if (product.collection_ids?.length > 0) {
+      const cpRows = product.collection_ids.map((cid, i) => ({
+        collection_id: cid,
+        product_id: productId,
+        position: i,
+      }));
+
+      const { error: cpError } = await supabaseAdmin
+        .from("collection_products")
+        .insert(cpRows);
+
+      if (cpError)
+        console.error("Collection assignment error:", cpError.message);
+    }
+
     return NextResponse.json({ success: true, product: newProduct });
   } catch (error) {
     console.error("Error creating product:", error);
@@ -453,6 +476,24 @@ export async function PUT(request) {
             .from("product_prices")
             .upsert(pricingRow, { onConflict: "handle" });
         }
+      }
+    }
+
+    // Replace collection assignments if provided
+    if (product.collection_ids !== undefined) {
+      await supabaseAdmin
+        .from("collection_products")
+        .delete()
+        .eq("product_id", id);
+
+      if (product.collection_ids.length > 0) {
+        const cpRows = product.collection_ids.map((cid, i) => ({
+          collection_id: cid,
+          product_id: id,
+          position: i,
+        }));
+
+        await supabaseAdmin.from("collection_products").insert(cpRows);
       }
     }
 
