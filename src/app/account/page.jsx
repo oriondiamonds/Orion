@@ -137,6 +137,16 @@ export default function AccountPage() {
     fetchOrders(session.user.email);
   }, [status, session, router]);
 
+  // Poll orders periodically so order status changes are reflected quickly
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user?.email) return;
+    const pollInterval = 25000; // 25s
+    const id = setInterval(() => {
+      fetchOrders(session.user.email);
+    }, pollInterval);
+    return () => clearInterval(id);
+  }, [status, session]);
+
   const fetchCustomerData = async (email) => {
     try {
       const res = await fetch(

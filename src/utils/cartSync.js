@@ -40,6 +40,12 @@ export async function syncCartToServer(customerEmail) {
     const result = await response.json();
     console.log(`✅ Synced ${result.itemCount} items to server`);
 
+    // Clear local-change marker on successful server sync
+    try {
+      const { clearCartLocalChange } = await import("./cartCleanup");
+      clearCartLocalChange();
+    } catch (e) {}
+
     return result;
   } catch (error) {
     console.error("Error syncing cart to server:", error);
@@ -67,8 +73,13 @@ export async function loadCartFromServer(customerEmail) {
       return [];
     }
 
-    // Update local cart with server data
+    // Update local cart with server data (server authoritative)
     localStorage.setItem("cart", JSON.stringify(data.items));
+    // Clear local-change marker since server is now authoritative
+    try {
+      const { clearCartLocalChange } = await import("./cartCleanup");
+      clearCartLocalChange();
+    } catch (e) {}
     console.log(`✅ Loaded ${data.itemCount} items from server`);
 
     return data.items;
@@ -238,6 +249,10 @@ export async function mergeLocalAndServerCart(customerEmail) {
 
     // Update local storage
     localStorage.setItem("cart", JSON.stringify(mergedCart));
+    try {
+      const { clearCartLocalChange } = await import("./cartCleanup");
+      clearCartLocalChange();
+    } catch (e) {}
 
     console.log(`✅ Merged cart: ${mergedCart.length} total items`);
     return mergedCart;

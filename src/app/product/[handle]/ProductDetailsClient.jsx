@@ -25,6 +25,7 @@ import toast from "react-hot-toast";
 import { formatINR } from "../../../utils/formatIndianCurrency";
 import { useSession } from "next-auth/react";
 import { syncCartToServer } from "../../../utils/cartSync";
+import { markCartLocallyModified } from "../../../utils/cartCleanup";
 import { syncWishlistToServer } from "../../../utils/wishlistSync";
 
 export default function ProductDetails() {
@@ -179,6 +180,7 @@ export default function ProductDetails() {
 
     // ----- SAVE TO LOCAL STORAGE -----
     localStorage.setItem("cart", JSON.stringify(cart));
+    markCartLocallyModified();
 
     // Update UI immediately (navbar/cart count)
     window.dispatchEvent(new Event("cartUpdated"));
@@ -358,7 +360,7 @@ export default function ProductDetails() {
     return Array.from(values);
   };
 
-  const toggleWishlist = () => {
+  const toggleWishlist = async () => {
     if (!product || !product.id) {
       toast.error("Product information not available");
       return;
@@ -375,9 +377,18 @@ export default function ProductDetails() {
 
       window.dispatchEvent(new Event("wishlistUpdated"));
 
-      // Sync to server if logged in
+      // Sync to server if logged in (await and report failures)
       if (session?.user?.email) {
-        syncWishlistToServer(session.user.email);
+        try {
+          const res = await syncWishlistToServer(session.user.email);
+          if (!res || res.success === false) {
+            console.error("Failed to sync wishlist to server:", res?.error || res);
+            toast.error("Failed to sync wishlist to server");
+          }
+        } catch (err) {
+          console.error("Error syncing wishlist to server:", err);
+          toast.error("Failed to sync wishlist to server");
+        }
       }
     } else {
       if (!selectedVariant) {
@@ -405,9 +416,18 @@ export default function ProductDetails() {
       toast.success("Added to wishlist!");
       window.dispatchEvent(new Event("wishlistUpdated"));
 
-      // Sync to server if logged in
+      // Sync to server if logged in (await and report failures)
       if (session?.user?.email) {
-        syncWishlistToServer(session.user.email);
+        try {
+          const res = await syncWishlistToServer(session.user.email);
+          if (!res || res.success === false) {
+            console.error("Failed to sync wishlist to server:", res?.error || res);
+            toast.error("Failed to sync wishlist to server");
+          }
+        } catch (err) {
+          console.error("Error syncing wishlist to server:", err);
+          toast.error("Failed to sync wishlist to server");
+        }
       }
     }
   };

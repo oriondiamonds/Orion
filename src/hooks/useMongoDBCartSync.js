@@ -9,6 +9,7 @@ import {
   removeItemFromMongoDB,
   clearMongoDBCart,
 } from "../utils/cartSync";
+import { markCartLocallyModified } from "../utils/cartCleanup";
 
 export function useMongoDBCart() {
   const { data: session } = useSession();
@@ -74,6 +75,7 @@ export function useMongoDBCart() {
 
       // Update local storage
       localStorage.setItem("cart", JSON.stringify(cart));
+      markCartLocallyModified();
       setCartItems(cart);
       window.dispatchEvent(new Event("cartUpdated"));
 
@@ -102,6 +104,7 @@ export function useMongoDBCart() {
       );
 
       localStorage.setItem("cart", JSON.stringify(updatedCart));
+      markCartLocallyModified();
       setCartItems(updatedCart);
       window.dispatchEvent(new Event("cartUpdated"));
 
@@ -127,6 +130,7 @@ export function useMongoDBCart() {
       );
 
       localStorage.setItem("cart", JSON.stringify(updatedCart));
+      markCartLocallyModified();
       setCartItems(updatedCart);
       window.dispatchEvent(new Event("cartUpdated"));
 
@@ -148,6 +152,7 @@ export function useMongoDBCart() {
       if (typeof window === "undefined") return;
 
       localStorage.setItem("cart", JSON.stringify([]));
+      markCartLocallyModified();
       setCartItems([]);
       window.dispatchEvent(new Event("cartUpdated"));
 

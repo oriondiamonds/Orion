@@ -10,6 +10,7 @@ import {
   loadWishlistFromServer,
 } from "../../utils/wishlistSync";
 import { syncCartToServer } from "../../utils/cartSync";
+import { markCartLocallyModified } from "../../utils/cartCleanup";
 
 export default function WishlistPage() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function WishlistPage() {
     setWishlistItems(items);
   };
 
-  const removeFromWishlist = (productId) => {
+  const removeFromWishlist = async (productId) => {
     const items = wishlistItems.filter((item) => item.id !== productId);
     localStorage.setItem("wishlist", JSON.stringify(items));
     setWishlistItems(items);
@@ -46,11 +47,20 @@ export default function WishlistPage() {
     toast.success("Removed from wishlist");
 
     if (session?.user?.email) {
-      syncWishlistToServer(session.user.email);
+      try {
+        const res = await syncWishlistToServer(session.user.email);
+        if (!res || res.success === false) {
+          console.error("Failed to sync wishlist to server:", res?.error || res);
+          toast.error("Failed to sync wishlist to server");
+        }
+      } catch (err) {
+        console.error("Error syncing wishlist to server:", err);
+        toast.error("Failed to sync wishlist to server");
+      }
     }
   };
 
-  const clearWishlist = () => {
+  const clearWishlist = async () => {
     if (
       window.confirm("Are you sure you want to clear your entire wishlist?")
     ) {
@@ -60,12 +70,21 @@ export default function WishlistPage() {
       toast.success("Wishlist cleared");
 
       if (session?.user?.email) {
-        syncWishlistToServer(session.user.email);
+        try {
+          const res = await syncWishlistToServer(session.user.email);
+          if (!res || res.success === false) {
+            console.error("Failed to sync wishlist to server:", res?.error || res);
+            toast.error("Failed to sync wishlist to server");
+          }
+        } catch (err) {
+          console.error("Error syncing wishlist to server:", err);
+          toast.error("Failed to sync wishlist to server");
+        }
       }
     }
   };
 
-  const moveToCart = (item) => {
+  const moveToCart = async (item) => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const existingItemIndex = cart.findIndex(
       (cartItem) => cartItem.variantId === item.variantId
@@ -91,11 +110,21 @@ export default function WishlistPage() {
     }
 
     localStorage.setItem("cart", JSON.stringify(cart));
+    markCartLocallyModified();
     window.dispatchEvent(new Event("cartUpdated"));
     removeFromWishlist(item.id);
-
+    
     if (session?.user?.email) {
-      syncCartToServer(session.user.email);
+      try {
+        const res = await syncCartToServer(session.user.email);
+        if (!res || res.success === false) {
+          console.error("Failed to sync cart to server:", res?.error || res);
+          toast.error("Failed to sync cart to server");
+        }
+      } catch (err) {
+        console.error("Error syncing cart to server:", err);
+        toast.error("Failed to sync cart to server");
+      }
     }
   };
 

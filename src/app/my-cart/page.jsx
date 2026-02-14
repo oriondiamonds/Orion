@@ -15,6 +15,7 @@ import {
   clearServerCart,
   loadCartFromServer,
 } from "../../utils/cartSync";
+import { markCartLocallyModified } from "../../utils/cartCleanup";
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
@@ -241,6 +242,7 @@ export default function CartPage() {
     // Update localStorage + UI
     if (typeof window !== "undefined") {
       localStorage.setItem("cart", JSON.stringify(updatedCart));
+      markCartLocallyModified();
       window.dispatchEvent(new Event("cartUpdated"));
     }
     setCartItems(updatedCart);
@@ -263,6 +265,7 @@ export default function CartPage() {
 
     if (typeof window !== "undefined") {
       localStorage.setItem("cart", JSON.stringify(updatedCart));
+      markCartLocallyModified();
       window.dispatchEvent(new Event("cartUpdated"));
     }
     setCartItems(updatedCart);
@@ -285,6 +288,7 @@ export default function CartPage() {
 
     if (typeof window !== "undefined") {
       localStorage.setItem("cart", JSON.stringify([]));
+      markCartLocallyModified();
       window.dispatchEvent(new Event("cartUpdated"));
     }
     setCartItems([]);

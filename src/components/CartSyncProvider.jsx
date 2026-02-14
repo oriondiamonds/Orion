@@ -12,7 +12,7 @@ import {
   mergeLocalAndServerWishlist,
   loadWishlistFromServer,
 } from "../utils/wishlistSync";
-import { cleanupCart } from "../utils/cartCleanup";
+import { cleanupCart, getCartLocalChangeAgeMs } from "../utils/cartCleanup";
 import toast from "react-hot-toast";
 
 export default function CartSyncProvider({ children }) {
@@ -55,18 +55,24 @@ export default function CartSyncProvider({ children }) {
             toast.success("Logged in successfully!", { duration: 2000 });
           }
         } else {
-          // No local items, try to load from MongoDB
-          console.log("📥 Loading cart from server...");
-          const cartItems = await loadCartFromServer(customerEmail);
+          // No local items — only load server cart if client hasn't recently modified cart
+          const age = getCartLocalChangeAgeMs();
+          // If user modified cart locally in the last 60 seconds, skip loading server cart
+          if (age && age < 60000) {
+            console.log("Skipping server cart load due to recent local changes");
+          } else {
+            console.log("📥 Loading cart from server...");
+            const cartItems = await loadCartFromServer(customerEmail);
 
-          if (cartItems && cartItems.length > 0) {
-            toast.success(
-              `Loaded ${cartItems.length} item(s) from your cart!`,
-              {
-                duration: 2000,
-              }
-            );
-            window.dispatchEvent(new Event("cartUpdated"));
+            if (cartItems && cartItems.length > 0) {
+              toast.success(
+                `Loaded ${cartItems.length} item(s) from your cart!`,
+                {
+                  duration: 2000,
+                }
+              );
+              window.dispatchEvent(new Event("cartUpdated"));
+            }
           }
         }
 

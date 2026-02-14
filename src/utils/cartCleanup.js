@@ -97,4 +97,40 @@ if (typeof window !== "undefined") {
   window.cleanupCart = cleanupCart;
   window.resetAllCartData = resetAllCartData;
   window.validateCartStructure = validateCartStructure;
+  // Expose helpers to mark/clear local cart modifications
+  window.markCartLocallyModified = function () {
+    try {
+      localStorage.setItem("cart_local_change", String(Date.now()));
+    } catch (e) {}
+  };
+  window.clearCartLocalChange = function () {
+    try {
+      localStorage.removeItem("cart_local_change");
+    } catch (e) {}
+  };
+}
+
+export function markCartLocallyModified() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("cart_local_change", String(Date.now()));
+  } catch (e) {}
+}
+
+export function clearCartLocalChange() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem("cart_local_change");
+  } catch (e) {}
+}
+
+export function getCartLocalChangeAgeMs() {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = Number(localStorage.getItem("cart_local_change") || "0");
+    if (!v) return null;
+    return Date.now() - v;
+  } catch (e) {
+    return null;
+  }
 }
