@@ -1,5 +1,11 @@
-@import url(https://db.onlinewebfonts.com/c/f7d34c9e4c3102c89048d775c27a78f3?family=The+Seasons);
 @import "tailwindcss";
+
+/* Use system fonts as fallback for better performance */
+@font-face {
+  font-family: "The Seasons";
+  src: local("Georgia"), local("serif");
+  font-display: swap; /* Show text immediately, swap font when loaded */
+}
 
 html {
   scroll-behavior: smooth;
@@ -17,14 +23,19 @@ html {
 }
 
 * {
-  font-family: "sans";
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "sans";
   font-style: normal;
 }
 
 h1,
 h2,
 h3 {
-  font-family: "The Seasons";
+  font-family: "The Seasons", "Georgia", serif;
   font-style: normal;
   font-weight: 400;
+}
+
+/* Optimize for LCP (Largest Contentful Paint) */
+body {
+  font-display: swap;
 }

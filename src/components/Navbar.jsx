@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   FiSearch,
   FiShoppingCart,
@@ -353,10 +354,12 @@ export function Navbar() {
                 onClick={handleResultClick}
                 className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors"
               >
-                <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden">
-                  <img
+                <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                  <Image
                     src={product.featuredImage?.url || "/placeholder.jpg"}
                     alt={product.title}
+                    width={64}
+                    height={64}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -505,11 +508,13 @@ export function Navbar() {
                         className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors"
                       >
                         <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden shrink-0">
-                          <img
+                          <Image
                             src={
                               product.featuredImage?.url || "/placeholder.jpg"
                             }
                             alt={product.title}
+                            width={48}
+                            height={48}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -526,7 +531,7 @@ export function Navbar() {
                       onClick={(e) => {
                         e.preventDefault();
                         router.push(
-                          `/search?q=${encodeURIComponent(searchQuery)}`
+                          `/search?q=${encodeURIComponent(searchQuery)}`,
                         );
                         setShowResults(false);
                         setMobileMenuOpen(false);

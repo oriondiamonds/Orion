@@ -38,13 +38,20 @@ export async function POST(request) {
       );
     }
 
-    // Signature valid — update order to paid
+    // Signature valid — update order to order_placed
     const { data: order, error: updateError } = await supabaseAdmin
       .from("orders")
       .update({
-        status: "paid",
+        status: "order_placed",
         razorpay_payment_id,
         razorpay_signature,
+        status_history: [
+          {
+            status: "order_placed",
+            timestamp: new Date().toISOString(),
+            note: "Payment verified",
+          },
+        ],
       })
       .eq("razorpay_order_id", razorpay_order_id)
       .select("order_number, id, coupon_code, discount_amount, customer_email")

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ShoppingCart, Trash2, Plus, Minus, Tag, X } from "lucide-react";
+import { ShoppingCart, Trash2, Plus, Minus, Tag, X, MapPin, ArrowLeft } from "lucide-react";
 import { getProductByHandle } from "../../queries/products";
 import toast from "react-hot-toast";
 import CartItemPriceBreakup from "../../components/CartItemPriceBreakup";
@@ -15,6 +15,140 @@ import {
   clearServerCart,
   loadCartFromServer,
 } from "../../utils/cartSync";
+
+const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya",
+  "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim",
+  "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand",
+  "West Bengal", "Andaman and Nicobar Islands", "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir",
+  "Ladakh", "Lakshadweep", "Puducherry",
+];
+
+function ShippingForm({ shippingAddress, setShippingAddress, addressErrors, onConfirm, onBack, loading }) {
+  const updateField = (field, value) => {
+    setShippingAddress((prev) => ({ ...prev, [field]: value }));
+  };
+
+  return (
+    <div className="border-t pt-4">
+      <div className="flex items-center gap-2 mb-4">
+        <MapPin className="w-5 h-5 text-[#0a1833]" />
+        <h3 className="font-semibold text-[#0a1833]">Shipping Address</h3>
+      </div>
+
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <input
+              type="text"
+              placeholder="First Name *"
+              value={shippingAddress.firstName}
+              onChange={(e) => updateField("firstName", e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent ${addressErrors.firstName ? "border-red-400" : "border-gray-300"}`}
+            />
+            {addressErrors.firstName && <p className="text-red-500 text-xs mt-0.5">{addressErrors.firstName}</p>}
+          </div>
+          <div>
+            <input
+              type="text"
+              placeholder="Last Name *"
+              value={shippingAddress.lastName}
+              onChange={(e) => updateField("lastName", e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent ${addressErrors.lastName ? "border-red-400" : "border-gray-300"}`}
+            />
+            {addressErrors.lastName && <p className="text-red-500 text-xs mt-0.5">{addressErrors.lastName}</p>}
+          </div>
+        </div>
+
+        <div>
+          <input
+            type="tel"
+            placeholder="Phone Number *"
+            value={shippingAddress.phone}
+            onChange={(e) => updateField("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+            className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent ${addressErrors.phone ? "border-red-400" : "border-gray-300"}`}
+          />
+          {addressErrors.phone && <p className="text-red-500 text-xs mt-0.5">{addressErrors.phone}</p>}
+        </div>
+
+        <div>
+          <input
+            type="text"
+            placeholder="Street Address *"
+            value={shippingAddress.address1}
+            onChange={(e) => updateField("address1", e.target.value)}
+            className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent ${addressErrors.address1 ? "border-red-400" : "border-gray-300"}`}
+          />
+          {addressErrors.address1 && <p className="text-red-500 text-xs mt-0.5">{addressErrors.address1}</p>}
+        </div>
+
+        <input
+          type="text"
+          placeholder="Apartment, suite, etc. (optional)"
+          value={shippingAddress.address2}
+          onChange={(e) => updateField("address2", e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent"
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <input
+              type="text"
+              placeholder="City *"
+              value={shippingAddress.city}
+              onChange={(e) => updateField("city", e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent ${addressErrors.city ? "border-red-400" : "border-gray-300"}`}
+            />
+            {addressErrors.city && <p className="text-red-500 text-xs mt-0.5">{addressErrors.city}</p>}
+          </div>
+          <div>
+            <select
+              value={shippingAddress.state}
+              onChange={(e) => updateField("state", e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent ${addressErrors.state ? "border-red-400" : "border-gray-300"} ${!shippingAddress.state ? "text-gray-400" : ""}`}
+            >
+              <option value="">State *</option>
+              {INDIAN_STATES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            {addressErrors.state && <p className="text-red-500 text-xs mt-0.5">{addressErrors.state}</p>}
+          </div>
+        </div>
+
+        <div>
+          <input
+            type="text"
+            placeholder="PIN Code *"
+            value={shippingAddress.zip}
+            onChange={(e) => updateField("zip", e.target.value.replace(/\D/g, "").slice(0, 6))}
+            className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent ${addressErrors.zip ? "border-red-400" : "border-gray-300"}`}
+          />
+          {addressErrors.zip && <p className="text-red-500 text-xs mt-0.5">{addressErrors.zip}</p>}
+        </div>
+      </div>
+
+      <button
+        onClick={onConfirm}
+        disabled={loading}
+        className="w-full mt-4 bg-[#0a1833] text-white py-3 rounded-full hover:bg-[#1a2f5a] transition disabled:opacity-50 font-semibold text-sm"
+      >
+        {loading ? "Processing..." : "Confirm & Pay"}
+      </button>
+      <button
+        onClick={onBack}
+        disabled={loading}
+        className="w-full mt-2 flex items-center justify-center gap-1 text-[#0a1833] py-2 text-sm font-medium hover:underline disabled:opacity-50"
+      >
+        <ArrowLeft size={14} />
+        Back to Cart
+      </button>
+    </div>
+  );
+}
 
 export default function CartPage() {
   const router = useRouter();
@@ -29,6 +163,18 @@ export default function CartPage() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
+  const [showShippingForm, setShowShippingForm] = useState(false);
+  const [shippingAddress, setShippingAddress] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    address1: "",
+    address2: "",
+    city: "",
+    state: "",
+    zip: "",
+  });
+  const [addressErrors, setAddressErrors] = useState({});
 
   // Resolve customerEmail + isLoggedIn safely (client-only)
   useEffect(() => {
@@ -218,6 +364,71 @@ export default function CartPage() {
     toast.success("Coupon removed");
   };
 
+  // Pre-fill shipping address from customer profile
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    const fetchDefaultAddress = async () => {
+      try {
+        const res = await fetch(
+          `/api/auth/profile?email=${encodeURIComponent(session.user.email)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const addr = data.customer?.defaultAddress;
+          if (addr) {
+            setShippingAddress({
+              firstName: addr.firstName || "",
+              lastName: addr.lastName || "",
+              phone: addr.phone || "",
+              address1: addr.address1 || "",
+              address2: addr.address2 || "",
+              city: addr.city || "",
+              state: addr.province || addr.state || "",
+              zip: addr.zip || "",
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load default address:", err);
+      }
+    };
+    fetchDefaultAddress();
+  }, [session]);
+
+  const validateShippingAddress = () => {
+    const errors = {};
+    if (!shippingAddress.firstName.trim()) errors.firstName = "Required";
+    if (!shippingAddress.lastName.trim()) errors.lastName = "Required";
+    if (!shippingAddress.phone.trim()) errors.phone = "Required";
+    else if (!/^[6-9]\d{9}$/.test(shippingAddress.phone.trim()))
+      errors.phone = "Enter valid 10-digit mobile number";
+    if (!shippingAddress.address1.trim()) errors.address1 = "Required";
+    if (!shippingAddress.city.trim()) errors.city = "Required";
+    if (!shippingAddress.state) errors.state = "Required";
+    if (!shippingAddress.zip.trim()) errors.zip = "Required";
+    else if (!/^\d{6}$/.test(shippingAddress.zip.trim()))
+      errors.zip = "Enter valid 6-digit PIN code";
+    setAddressErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleProceedToShipping = () => {
+    if (!isLoggedIn) {
+      toast.error("Please login to proceed to checkout");
+      router.push("/login");
+      return;
+    }
+    setShowShippingForm(true);
+  };
+
+  const handleConfirmAndPay = () => {
+    if (!validateShippingAddress()) {
+      toast.error("Please fill in all required address fields");
+      return;
+    }
+    handleCheckout();
+  };
+
   const handleCheckout = async () => {
     if (!isLoggedIn) {
       toast.error("Please login to proceed to checkout");
@@ -250,6 +461,7 @@ export default function CartPage() {
           cartItems: cartItems,
           customerEmail: email,
           couponCode: appliedCoupon?.couponCode || null,
+          shippingAddress: shippingAddress,
         }),
       });
 
@@ -544,19 +756,35 @@ export default function CartPage() {
                 )}
               </div>
 
-              <button
-                onClick={handleCheckout}
-                disabled={loading}
-                className="w-full bg-[#0a1833] text-white py-3 rounded-full hover:bg-[#1a2f5a] transition disabled:opacity-50 font-semibold text-sm"
-              >
-                {loading ? "Processing..." : "Proceed to Checkout"}
-              </button>
-              <button
-                onClick={() => router.push("/")}
-                className="w-full mt-3 border border-[#0a1833] text-[#0a1833] py-3 rounded-full hover:bg-gray-50 transition font-semibold text-sm"
-              >
-                Continue Shopping
-              </button>
+              {!showShippingForm ? (
+                <>
+                  <button
+                    onClick={handleProceedToShipping}
+                    disabled={loading}
+                    className="w-full bg-[#0a1833] text-white py-3 rounded-full hover:bg-[#1a2f5a] transition disabled:opacity-50 font-semibold text-sm"
+                  >
+                    Proceed to Checkout
+                  </button>
+                  <button
+                    onClick={() => router.push("/")}
+                    className="w-full mt-3 border border-[#0a1833] text-[#0a1833] py-3 rounded-full hover:bg-gray-50 transition font-semibold text-sm"
+                  >
+                    Continue Shopping
+                  </button>
+                </>
+              ) : (
+                <ShippingForm
+                  shippingAddress={shippingAddress}
+                  setShippingAddress={setShippingAddress}
+                  addressErrors={addressErrors}
+                  onConfirm={handleConfirmAndPay}
+                  onBack={() => {
+                    setShowShippingForm(false);
+                    setAddressErrors({});
+                  }}
+                  loading={loading}
+                />
+              )}
             </div>
           </div>
         </div>

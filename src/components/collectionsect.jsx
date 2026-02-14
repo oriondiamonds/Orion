@@ -1,5 +1,5 @@
 "use client";
-
+import Image from "next/image";
 import {
   Heart,
   ChevronLeft,
@@ -30,7 +30,7 @@ export default function CollectionSection({ id, title, items = [] }) {
     items.forEach((item) => {
       (item.allVariants || []).forEach((variant) => {
         const karatOpt = (variant.selectedOptions || []).find(
-          (opt) => opt.name === "Gold Karat"
+          (opt) => opt.name === "Gold Karat",
         );
         if (karatOpt) karats.add(karatOpt.value);
       });
@@ -53,9 +53,9 @@ export default function CollectionSection({ id, title, items = [] }) {
       : items.filter((item) =>
           (item.allVariants || []).some((variant) =>
             (variant.selectedOptions || []).some(
-              (opt) => opt.name === "Gold Karat" && opt.value === karatFilter
-            )
-          )
+              (opt) => opt.name === "Gold Karat" && opt.value === karatFilter,
+            ),
+          ),
         );
 
   // Calculate min and max prices based on effective prices
@@ -282,9 +282,11 @@ export default function CollectionSection({ id, title, items = [] }) {
             >
               {/* Image Container */}
               <div className="relative overflow-hidden bg-gray-50 aspect-4/5 md:aspect-square">
-                <img
+                <Image
                   src={item.image}
                   alt={item.name}
+                  fill
+                  priority={false}
                   className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

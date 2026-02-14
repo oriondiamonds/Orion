@@ -1,4 +1,4 @@
-// src/middleware.js — Capture UTM params from URL into a cookie
+// src/middleware.js — Capture UTM params from URL into a cookie + Performance optimizations
 import { NextResponse } from "next/server";
 
 const UTM_PARAMS = [
@@ -13,8 +13,39 @@ const UTM_COOKIE_NAME = "orion_utm";
 const UTM_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 export function middleware(request) {
-  const { searchParams } = request.nextUrl;
+  const { searchParams, pathname } = request.nextUrl;
   const response = NextResponse.next();
+
+  // Set caching headers for static assets and API responses
+  if (pathname.startsWith("/api/")) {
+    // API routes - cache based on data freshness
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=60, stale-while-revalidate=120",
+    );
+  } else if (
+    pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|webp|woff|woff2)$/)
+  ) {
+    // Static assets - cache for 1 year
+    response.headers.set(
+      "Cache-Control",
+      "public, max-age=31536000, immutable",
+    );
+  } else {
+    // HTML pages - cache for shorter duration
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=3600, stale-while-revalidate=86400",
+    );
+  }
+
+  // Enable gzip compression by setting Accept-Encoding header
+  response.headers.set("Accept-Encoding", "gzip, deflate, br");
+
+  // Security and performance headers
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
   // Check if any UTM params exist in the current URL
   const utmData = {};

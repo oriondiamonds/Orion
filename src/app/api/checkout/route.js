@@ -6,7 +6,7 @@ import { validateCoupon } from "../../../utils/couponValidator.js";
 
 export async function POST(request) {
   try {
-    const { cartItems, customerEmail, couponCode } = await request.json();
+    const { cartItems, customerEmail, couponCode, shippingAddress } = await request.json();
 
     if (!cartItems || cartItems.length === 0) {
       return NextResponse.json(
@@ -18,6 +18,22 @@ export async function POST(request) {
     if (!customerEmail) {
       return NextResponse.json(
         { success: false, error: "Customer email is required" },
+        { status: 400 },
+      );
+    }
+
+    if (
+      !shippingAddress ||
+      !shippingAddress.firstName ||
+      !shippingAddress.lastName ||
+      !shippingAddress.phone ||
+      !shippingAddress.address1 ||
+      !shippingAddress.city ||
+      !shippingAddress.state ||
+      !shippingAddress.zip
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Complete shipping address is required" },
         { status: 400 },
       );
     }
@@ -78,6 +94,7 @@ export async function POST(request) {
       currency: "INR",
       status: "pending",
       razorpay_order_id: razorpayOrder.id,
+      shipping_address: shippingAddress,
     });
 
     if (insertError) {

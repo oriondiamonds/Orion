@@ -7,6 +7,7 @@ import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { searchProducts } from "../../queries/search";
 import { calculateFinalPrice } from "../../utils/price";
 import { formatIndianCurrency } from "../../utils/formatIndianCurrency";
+import Image from "next/image";
 
 export default function SearchResultsPage() {
   const searchParams = useSearchParams();
@@ -25,16 +26,16 @@ export default function SearchResultsPage() {
   const calculateProductPrice = async (description, selectedKarat = "10K") => {
     try {
       const diamondShapeMatch = description.match(
-        /Diamond Shape:\s*([A-Za-z,\s]+?)(?=Total Diamonds|Diamond Weight|$)/i
+        /Diamond Shape:\s*([A-Za-z,\s]+?)(?=Total Diamonds|Diamond Weight|$)/i,
       );
       const totalDiamondsMatch = description.match(
-        /Total Diamonds:\s*([\d,\s]+?)(?=Diamond Weight|Total Diamond Weight|Metal Weights|$)/i
+        /Total Diamonds:\s*([\d,\s]+?)(?=Diamond Weight|Total Diamond Weight|Metal Weights|$)/i,
       );
       const diamondWeightMatch = description.match(
-        /Diamond Weight:\s*([\d.,\s]+?)(?=Total Diamond Weight|Metal Weights|$)/i
+        /Diamond Weight:\s*([\d.,\s]+?)(?=Total Diamond Weight|Metal Weights|$)/i,
       );
       const goldWeightMatch = description.match(
-        new RegExp(`${selectedKarat} Gold:\\s*([\\d.]+)g`, "i")
+        new RegExp(`${selectedKarat} Gold:\\s*([\\d.]+)g`, "i"),
       );
 
       const diamondShapes = diamondShapeMatch
@@ -98,7 +99,7 @@ export default function SearchResultsPage() {
             // Calculate actual price using pricing logic
             const calculatedPrice = await calculateProductPrice(
               product.description || "",
-              "10K"
+              "10K",
             );
 
             return {
@@ -112,7 +113,7 @@ export default function SearchResultsPage() {
               price: calculatedPrice,
               description: product.description || "",
             };
-          })
+          }),
         );
 
         setResults(transformedProducts);
@@ -167,9 +168,11 @@ export default function SearchResultsPage() {
               >
                 {/* Image Container */}
                 <div className="relative overflow-hidden bg-gray-50 aspect-4/5 md:aspect-square">
-                  <img
+                  <Image
                     src={item.image}
                     alt={item.name}
+                    fill
+                    priority={false}
                     className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

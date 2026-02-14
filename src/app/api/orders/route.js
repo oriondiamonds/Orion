@@ -13,7 +13,7 @@ export async function GET(request) {
     const { data: orders, error } = await supabaseAdmin
       .from("orders")
       .select(
-        "id, order_number, items, subtotal, currency, status, razorpay_payment_id, created_at"
+        "id, order_number, items, subtotal, discount_amount, coupon_code, currency, status, status_history, shipping_address, razorpay_payment_id, created_at"
       )
       .eq("customer_email", email.toLowerCase().trim())
       .neq("status", "failed")
@@ -28,8 +28,12 @@ export async function GET(request) {
         orderNumber: o.order_number,
         items: o.items,
         subtotal: o.subtotal,
+        discountAmount: o.discount_amount,
+        couponCode: o.coupon_code,
         currency: o.currency,
         status: o.status,
+        statusHistory: o.status_history || [],
+        shippingAddress: o.shipping_address,
         paymentId: o.razorpay_payment_id,
         createdAt: o.created_at,
       })),
