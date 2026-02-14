@@ -33,6 +33,7 @@ const EMPTY_PRODUCT = {
 };
 
 const EMPTY_PRICING = {
+  pricing_mode: "live",
   weight_10k: "",
   weight_14k: "",
   weight_18k: "",
@@ -205,6 +206,7 @@ export default function AdminProductsPage() {
         })),
         pricing: p.pricing
           ? {
+              pricing_mode: p.pricing.pricing_mode || "live",
               weight_10k: p.pricing.weight_10k || "",
               weight_14k: p.pricing.weight_14k || "",
               weight_18k: p.pricing.weight_18k || "",
@@ -1161,6 +1163,50 @@ export default function AdminProductsPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      {/* Pricing Mode Toggle */}
+                      <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Pricing Mode:</span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                pricing: { ...formData.pricing, pricing_mode: "live" },
+                              })
+                            }
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                              (formData.pricing?.pricing_mode || "live") === "live"
+                                ? "bg-green-600 text-white"
+                                : "bg-white border border-gray-300 text-gray-600 hover:border-gray-400"
+                            }`}
+                          >
+                            Live Gold Rate
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                pricing: { ...formData.pricing, pricing_mode: "fixed" },
+                              })
+                            }
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                              formData.pricing?.pricing_mode === "fixed"
+                                ? "bg-blue-600 text-white"
+                                : "bg-white border border-gray-300 text-gray-600 hover:border-gray-400"
+                            }`}
+                          >
+                            Fixed Price
+                          </button>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {(formData.pricing?.pricing_mode || "live") === "live"
+                            ? "Price calculated from live gold rate + weights"
+                            : "Uses 10K/14K/18K prices directly"}
+                        </span>
+                      </div>
+
                       {/* Gold Weights */}
                       <div>
                         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">

@@ -294,6 +294,7 @@ export async function POST(request) {
         gold_price_14k: parseFloat(product.pricing.gold_price_14k) || 0,
         making_charges: parseFloat(product.pricing.making_charges) || 0,
         gst: parseFloat(product.pricing.gst) || 0,
+        pricing_mode: product.pricing.pricing_mode || "live",
         source: "admin",
         synced_at: new Date().toISOString(),
       };
@@ -484,6 +485,7 @@ export async function PUT(request) {
             gold_price_14k: parseFloat(pricing.gold_price_14k) || 0,
             making_charges: parseFloat(pricing.making_charges) || 0,
             gst: parseFloat(pricing.gst) || 0,
+            pricing_mode: pricing.pricing_mode || "live",
             source: "admin",
             synced_at: new Date().toISOString(),
           };

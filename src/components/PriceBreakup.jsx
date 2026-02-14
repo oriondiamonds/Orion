@@ -19,7 +19,27 @@ export default function PriceBreakup({
       const selectedKarat = selectedOptions["Gold Karat"] || "18K";
       const karatNum = parseInt(selectedKarat);
 
-      // Use synced product_prices data if available
+      // Fixed pricing mode — use stored prices directly
+      if (pricing?.pricing_mode === "fixed") {
+        const totalPrice = Math.round(Number(pricing[`price_${karatNum}k`]) || 0);
+        const diamondPrice = Math.round(Number(pricing.diamond_price) || 0);
+        const goldPrice = Math.round(Number(pricing.gold_price_14k) || 0);
+        const makingCharge = Math.round(Number(pricing.making_charges) || 0);
+        const gst = Math.round(Number(pricing.gst) || 0);
+
+        setPriceData({
+          diamondPrice,
+          goldPrice,
+          makingCharge,
+          subtotal: totalPrice - gst,
+          gst,
+          totalPrice,
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Use synced product_prices data if available (live mode)
       if (pricing && pricing.diamond_price && pricing[`weight_${karatNum}k`]) {
         try {
           const weightK = Number(pricing[`weight_${karatNum}k`]) || 0;
