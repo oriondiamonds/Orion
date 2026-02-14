@@ -18,11 +18,27 @@ export function middleware(request) {
 
   // Set caching headers for static assets and API responses
   if (pathname.startsWith("/api/")) {
-    // API routes - cache based on data freshness
-    response.headers.set(
-      "Cache-Control",
-      "public, s-maxage=60, stale-while-revalidate=120",
-    );
+    // API routes
+    // Avoid caching user-specific or transactional endpoints (cart, wishlist, orders, checkout)
+    const nonCacheableApis = [
+      "/api/cart",
+      "/api/wishlist",
+      "/api/orders",
+      "/api/checkout",
+      "/api/auth",
+    ];
+
+    const isNonCacheable = nonCacheableApis.some((p) => pathname.startsWith(p));
+    if (isNonCacheable) {
+      // User-specific/transactional data must not be cached by shared caches
+      response.headers.set("Cache-Control", "no-store, private");
+    } else {
+      // API routes that are safe to cache
+      response.headers.set(
+        "Cache-Control",
+        "public, s-maxage=60, stale-while-revalidate=120"
+      );
+    }
   } else if (
     pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|webp|woff|woff2)$/)
   ) {
