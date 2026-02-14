@@ -21,8 +21,9 @@ function extractDiamondDetails(description) {
 }
 
 async function transformEarringsData(productsEdges) {
-  const transformedProducts = await Promise.all(
-    productsEdges.map(async ({ node: product }) => {
+  const sheetPricing = await getSheetPricing();
+
+  const transformedProducts = productsEdges.map(({ node: product }) => {
       const firstVariant = product.variants.edges[0]?.node;
 
       const goldKarat =
@@ -38,19 +39,18 @@ async function transformEarringsData(productsEdges) {
           (opt) => opt.name === "Diamond Grade"
         )?.value || "";
 
-      const diamondDetails = extractDiamondDetails(product.description);
+      const diamondDetails = extractDiamondDetails(product.description || "");
 
-      const sheetPricing = await getSheetPricing();
       const handle = product.handle;
       const productPricing = sheetPricing[handle] || {};
-      const variantPrice = parseFloat(firstVariant?.price.amount || 0);
+      const variantPrice = parseFloat(firstVariant?.price?.amount || 0);
 
       return {
         productCode: firstVariant?.sku || "",
         handle: product.handle,
         name: product.title,
         gold: `${goldKarat} ${goldColor}`.trim(),
-        goldPrice: firstVariant?.price.amount || "0",
+        goldPrice: firstVariant?.price?.amount || "0",
         diamondDetails: {
           carat: diamondDetails.carat,
           quality: diamondGrade || diamondDetails.quality,
@@ -63,7 +63,7 @@ async function transformEarringsData(productsEdges) {
           "14K": productPricing.price14K || variantPrice,
           "18K": productPricing.price18K || variantPrice,
         },
-        currency: firstVariant?.price.currencyCode || "INR",
+        currency: firstVariant?.price?.currencyCode || "INR",
         image: product.featuredImage?.url || firstVariant?.image?.url || "",
         images:
           product.images?.edges?.map((img) => ({
@@ -72,8 +72,7 @@ async function transformEarringsData(productsEdges) {
           })) || [],
         allVariants: product.variants.edges.map((v) => v.node),
       };
-    })
-  );
+    });
 
   // Sort: Studs first, then Hoops
   return transformedProducts.sort((a, b) => {
