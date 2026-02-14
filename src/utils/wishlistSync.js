@@ -1,44 +1,105 @@
 // src/utils/wishlistSync.js - Server Wishlist Sync
 
+/**
+ * Sync local wishlist to server using POST (for batch updates)
+ */
+async function syncWishlistViaPost(customerEmail) {
+  const localWishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
+
+  if (localWishlist.length === 0) {
+    return { success: true, itemCount: 0 };
+  }
+
+  const validItems = localWishlist.filter(
+    (item) => item && item.id && item.handle && item.title
+  );
+
+  if (validItems.length === 0) {
+    return { success: true, itemCount: 0 };
+  }
+
+  const response = await fetch("/api/wishlist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: customerEmail,
+      items: validItems,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save wishlist to server");
+  }
+
+  const result = await response.json();
+  return result;
+}
+
+/**
+ * Main export: Sync local wishlist to server
+ */
 export async function syncWishlistToServer(customerEmail) {
   try {
-    const localWishlist = JSON.parse(
-      localStorage.getItem("wishlist") || "[]"
-    );
-
-    if (localWishlist.length === 0) {
-      return { success: true, itemCount: 0 };
-    }
-
-    const validItems = localWishlist.filter(
-      (item) => item && item.id && item.handle && item.title
-    );
-
-    if (validItems.length === 0) {
-      return { success: true, itemCount: 0 };
-    }
-
-    const response = await fetch("/api/wishlist", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: customerEmail,
-        items: validItems,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to save wishlist to server");
-    }
-
-    const result = await response.json();
-    return result;
+    return await syncWishlistViaPost(customerEmail);
   } catch (error) {
     console.error("Error syncing wishlist to server:", error);
     return { success: false, error: error.message };
   }
 }
 
+/**
+ * Remove single item from wishlist on server
+ * Uses DELETE endpoint to ensure proper server-side removal without merge conflicts
+ */
+export async function removeWishlistItemFromServer(
+  customerEmail,
+  variantId
+) {
+  try {
+    const response = await fetch(
+      `/api/wishlist?email=${encodeURIComponent(customerEmail)}&variantId=${encodeURIComponent(
+        variantId
+      )}`,
+      { method: "DELETE" }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to remove item from server wishlist");
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Error removing wishlist item from server:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Clear entire wishlist on server and locally
+ */
+export async function clearWishlistOnServerAndLocal(customerEmail) {
+  try {
+    const response = await fetch(
+      `/api/wishlist?email=${encodeURIComponent(customerEmail)}`,
+      { method: "DELETE" }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to clear wishlist on server");
+    }
+
+    localStorage.setItem("wishlist", JSON.stringify([]));
+    return await response.json();
+  } catch (error) {
+    console.error("Error clearing wishlist on server:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Load wishlist from server and store in localStorage
+ */
 export async function loadWishlistFromServer(customerEmail) {
   try {
     const response = await fetch(
@@ -64,7 +125,9 @@ export async function loadWishlistFromServer(customerEmail) {
 }
 
 /**
- * Merge local and server wishlists (union by variantId, last-added-wins)
+ * Merge local and server wishlists (union by variantId, local takes precedence)
+ * WARNING: Only use on initial login sync to preserve both local and server items.
+ * Do NOT use after explicit deletions as it will re-add removed items.
  */
 export async function mergeLocalAndServerWishlist(customerEmail) {
   try {

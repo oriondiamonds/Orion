@@ -15,7 +15,7 @@ import {
   clearServerCart,
   loadCartFromServer,
 } from "../../utils/cartSync";
-import { markCartLocallyModified } from "../../utils/cartCleanup";
+import { markCartLocallyModified, getCartLocalChangeAgeMs } from "../../utils/cartCleanup";
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
@@ -221,10 +221,15 @@ export default function CartPage() {
     loadCart();
 
     // Refresh from server if logged in (cross-device sync)
+    // Skip if user recently modified cart locally (prevents deleted items reappearing)
     if (session?.user?.email) {
-      loadCartFromServer(session.user.email).then(() => {
-        loadCart();
-      });
+      const localChangeAge = getCartLocalChangeAgeMs();
+      const hasRecentLocalChange = localChangeAge !== null && localChangeAge < 60000;
+      if (!hasRecentLocalChange) {
+        loadCartFromServer(session.user.email).then(() => {
+          loadCart();
+        });
+      }
     }
 
     const handleCartUpdate = () => loadCart();

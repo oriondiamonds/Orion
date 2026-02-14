@@ -8,6 +8,8 @@ import toast from "react-hot-toast";
 import {
   syncWishlistToServer,
   loadWishlistFromServer,
+  removeWishlistItemFromServer,
+  clearWishlistOnServerAndLocal,
 } from "../../utils/wishlistSync";
 import { syncCartToServer } from "../../utils/cartSync";
 import { markCartLocallyModified } from "../../utils/cartCleanup";
@@ -48,14 +50,20 @@ export default function WishlistPage() {
 
     if (session?.user?.email) {
       try {
-        const res = await syncWishlistToServer(session.user.email);
-        if (!res || res.success === false) {
-          console.error("Failed to sync wishlist to server:", res?.error || res);
-          toast.error("Failed to sync wishlist to server");
+        const itemToRemove = wishlistItems.find((item) => item.id === productId);
+        if (itemToRemove?.variantId) {
+          const res = await removeWishlistItemFromServer(
+            session.user.email,
+            itemToRemove.variantId
+          );
+          if (!res || res.success === false) {
+            console.error("Failed to remove from server:", res?.error || res);
+            toast.error("Failed to sync removal to server");
+          }
         }
       } catch (err) {
-        console.error("Error syncing wishlist to server:", err);
-        toast.error("Failed to sync wishlist to server");
+        console.error("Error removing from server:", err);
+        toast.error("Failed to sync removal to server");
       }
     }
   };
@@ -71,14 +79,14 @@ export default function WishlistPage() {
 
       if (session?.user?.email) {
         try {
-          const res = await syncWishlistToServer(session.user.email);
+          const res = await clearWishlistOnServerAndLocal(session.user.email);
           if (!res || res.success === false) {
-            console.error("Failed to sync wishlist to server:", res?.error || res);
-            toast.error("Failed to sync wishlist to server");
+            console.error("Failed to clear on server:", res?.error || res);
+            toast.error("Failed to sync clear to server");
           }
         } catch (err) {
-          console.error("Error syncing wishlist to server:", err);
-          toast.error("Failed to sync wishlist to server");
+          console.error("Error clearing on server:", err);
+          toast.error("Failed to sync clear to server");
         }
       }
     }
@@ -187,7 +195,7 @@ export default function WishlistPage() {
                   className="w-full h-64 object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
                 />
                 <button
-                  onClick={() => removeFromWishlist(item.id)}
+                  onClick={() => removeFromWishlist(item.id, item.variantId)}
                   className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:bg-red-50 transition"
                 >
                   <Heart className="w-5 h-5 fill-red-500 text-red-500" />

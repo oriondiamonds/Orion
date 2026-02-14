@@ -26,7 +26,7 @@ import { formatINR } from "../../../utils/formatIndianCurrency";
 import { useSession } from "next-auth/react";
 import { syncCartToServer } from "../../../utils/cartSync";
 import { markCartLocallyModified } from "../../../utils/cartCleanup";
-import { syncWishlistToServer } from "../../../utils/wishlistSync";
+import { syncWishlistToServer, removeWishlistItemFromServer } from "../../../utils/wishlistSync";
 
 export default function ProductDetails() {
   const modalRef = useRef(null);

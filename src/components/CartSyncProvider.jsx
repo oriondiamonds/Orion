@@ -40,8 +40,17 @@ export default function CartSyncProvider({ children }) {
 
         console.log("🔄 Starting cart sync for:", customerEmail);
 
-        if (hasLocalItems) {
-          // User has local items - merge with MongoDB
+        const localChangeAge = getCartLocalChangeAgeMs();
+        const hasRecentLocalChange = localChangeAge !== null && localChangeAge < 60000;
+
+        if (hasRecentLocalChange) {
+          // Local cart was modified recently (add/remove/clear) — treat local as truth
+          // Sync local → server to ensure server matches what user sees
+          console.log("📤 Recent local changes — syncing local cart to server");
+          await syncCartToServer(customerEmail);
+          window.dispatchEvent(new Event("cartUpdated"));
+        } else if (hasLocalItems) {
+          // User has local items and no recent changes — merge with server
           console.log("📦 Merging", cleanedCart.length, "local items...");
 
           const mergedCart = await mergeLocalAndServerCart(customerEmail);
@@ -55,24 +64,18 @@ export default function CartSyncProvider({ children }) {
             toast.success("Logged in successfully!", { duration: 2000 });
           }
         } else {
-          // No local items — only load server cart if client hasn't recently modified cart
-          const age = getCartLocalChangeAgeMs();
-          // If user modified cart locally in the last 60 seconds, skip loading server cart
-          if (age && age < 60000) {
-            console.log("Skipping server cart load due to recent local changes");
-          } else {
-            console.log("📥 Loading cart from server...");
-            const cartItems = await loadCartFromServer(customerEmail);
+          // No local items and no recent changes — load from server
+          console.log("📥 Loading cart from server...");
+          const cartItems = await loadCartFromServer(customerEmail);
 
-            if (cartItems && cartItems.length > 0) {
-              toast.success(
-                `Loaded ${cartItems.length} item(s) from your cart!`,
-                {
-                  duration: 2000,
-                }
-              );
-              window.dispatchEvent(new Event("cartUpdated"));
-            }
+          if (cartItems && cartItems.length > 0) {
+            toast.success(
+              `Loaded ${cartItems.length} item(s) from your cart!`,
+              {
+                duration: 2000,
+              }
+            );
+            window.dispatchEvent(new Event("cartUpdated"));
           }
         }
 
