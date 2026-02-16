@@ -1,4 +1,3 @@
-// src/app/my-cart/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -756,6 +755,9 @@ export default function CartPage() {
                     {couponError && (
                       <p className="text-red-500 text-xs mt-1">{couponError}</p>
                     )}
+                    <div className="text-xs text-gray-500 mt-2">
+                      * Coupon discounts apply to diamond price only
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">

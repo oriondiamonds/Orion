@@ -1,4 +1,3 @@
-// src/utils/couponValidator.js
 import { supabaseAdmin } from "./supabase-admin.js";
 
 export async function validateCoupon(code, cartItems, customerEmail) {
@@ -57,45 +56,71 @@ export async function validateCoupon(code, cartItems, customerEmail) {
     }
   }
 
-  // 5. Calculate cart subtotal
-  const subtotal = cartItems.reduce((total, item) => {
+  // 5. Calculate diamond-only subtotal and full cart subtotal
+  const diamondSubtotal = cartItems.reduce((total, item) => {
+    const quantity = item.quantity || 1;
+
+    // Prefer priceBreakdown.diamondPrice if available
+    if (item.priceBreakdown && item.priceBreakdown.diamondPrice) {
+      return total + parseFloat(item.priceBreakdown.diamondPrice) * quantity;
+    }
+
+    // Fallback: if no breakdown, assume 0 diamond price (shouldn't happen in production)
+    console.warn(
+      `Item ${item.variantId || "unknown"} missing priceBreakdown.diamondPrice, excluding from discount`
+    );
+    return total;
+  }, 0);
+
+  // Also calculate full cart subtotal for min order validation
+  const cartSubtotal = cartItems.reduce((total, item) => {
     const price = parseFloat(item.calculatedPrice || item.price) || 0;
     return total + price * (item.quantity || 1);
   }, 0);
 
-  // 6. Check minimum order amount
-  if (coupon.min_order_amount && subtotal < parseFloat(coupon.min_order_amount)) {
+  // 6. Check minimum order amount (uses full cart subtotal, not diamond-only)
+  if (
+    coupon.min_order_amount &&
+    cartSubtotal < parseFloat(coupon.min_order_amount)
+  ) {
     return {
       valid: false,
       error: `Minimum order amount is ₹${parseFloat(coupon.min_order_amount).toLocaleString("en-IN")}`,
     };
   }
 
-  // 7. Calculate discount
+  // 7. Calculate discount (on diamond-only subtotal)
   let discountAmount = 0;
 
   if (coupon.discount_type === "percentage") {
-    discountAmount = subtotal * (parseFloat(coupon.discount_value) / 100);
+    discountAmount =
+      diamondSubtotal * (parseFloat(coupon.discount_value) / 100);
     // Apply max discount cap
     if (coupon.max_discount_amount !== null) {
-      discountAmount = Math.min(discountAmount, parseFloat(coupon.max_discount_amount));
+      discountAmount = Math.min(
+        discountAmount,
+        parseFloat(coupon.max_discount_amount)
+      );
     }
   } else {
-    // flat discount
-    discountAmount = Math.min(parseFloat(coupon.discount_value), subtotal);
+    // flat discount, capped at diamond subtotal
+    discountAmount = Math.min(
+      parseFloat(coupon.discount_value),
+      diamondSubtotal
+    );
   }
 
   discountAmount = Math.round(discountAmount * 100) / 100;
 
-  // Build message
+  // Build message (specify "on diamonds")
   let message = "";
   if (coupon.discount_type === "percentage") {
-    message = `${parseFloat(coupon.discount_value)}% off`;
+    message = `${parseFloat(coupon.discount_value)}% off on diamonds`;
     if (coupon.max_discount_amount) {
       message += ` (up to ₹${parseFloat(coupon.max_discount_amount).toLocaleString("en-IN")})`;
     }
   } else {
-    message = `₹${parseFloat(coupon.discount_value).toLocaleString("en-IN")} off`;
+    message = `₹${parseFloat(coupon.discount_value).toLocaleString("en-IN")} off on diamonds`;
   }
   message += ` — you save ₹${discountAmount.toLocaleString("en-IN")}!`;
 
