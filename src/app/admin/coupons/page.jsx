@@ -11,8 +11,11 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  Link,
+  Copy,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import SearchableMultiSelect from "../../../components/SearchableMultiSelect";
 
 const EMPTY_COUPON = {
   code: "",
@@ -26,6 +29,14 @@ const EMPTY_COUPON = {
   starts_at: "",
   expires_at: "",
   is_active: true,
+  applies_to: "all",
+  applicable_product_ids: [],
+  applicable_collections: [],
+  utm_campaign: "",
+  utm_source: "",
+  utm_medium: "",
+  agency_id: "",
+  channel: "",
 };
 
 function formatDate(dateStr) {
@@ -56,10 +67,60 @@ export default function AdminCouponsPage() {
   const [formData, setFormData] = useState({ ...EMPTY_COUPON });
   const [expandedUsage, setExpandedUsage] = useState(null);
   const [usageHistory, setUsageHistory] = useState({});
+  const [agencies, setAgencies] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [collections, setCollections] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
 
   useEffect(() => {
     fetchCoupons();
+    fetchAgencies();
+    fetchProducts();
+    fetchCollections();
   }, []);
+
+  const fetchAgencies = async () => {
+    try {
+      const res = await fetch('/api/admin/agencies');
+      const data = await res.json();
+      if (data.success) {
+        setAgencies(data.agencies || []);
+      }
+    } catch (err) {
+      console.error('Failed to load agencies:', err);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      setProductsLoading(true);
+      const res = await fetch('/api/admin/products/list');
+      const data = await res.json();
+      if (data.success) {
+        setProducts(data.products || []);
+      }
+    } catch (err) {
+      console.error('Failed to load products:', err);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  const fetchCollections = async () => {
+    try {
+      setCollectionsLoading(true);
+      const res = await fetch('/api/admin/collections/list');
+      const data = await res.json();
+      if (data.success) {
+        setCollections(data.collections || []);
+      }
+    } catch (err) {
+      console.error('Failed to load collections:', err);
+    } finally {
+      setCollectionsLoading(false);
+    }
+  };
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -101,6 +162,18 @@ export default function AdminCouponsPage() {
       starts_at: toLocalDatetime(coupon.starts_at),
       expires_at: toLocalDatetime(coupon.expires_at),
       is_active: coupon.is_active,
+      applies_to: coupon.applies_to || "all",
+      applicable_product_ids: Array.isArray(coupon.applicable_product_ids)
+        ? coupon.applicable_product_ids
+        : [],
+      applicable_collections: Array.isArray(coupon.applicable_collections)
+        ? coupon.applicable_collections
+        : [],
+      utm_campaign: coupon.utm_campaign || "",
+      utm_source: coupon.utm_source || "",
+      utm_medium: coupon.utm_medium || "",
+      agency_id: coupon.agency_id || "",
+      channel: coupon.channel || "",
     });
     setShowForm(true);
   };
@@ -117,6 +190,15 @@ export default function AdminCouponsPage() {
 
     setSaving(true);
     try {
+      // Targeting fields are already arrays from SearchableMultiSelect
+      const productIds = formData.applies_to === "specific_products" && formData.applicable_product_ids?.length > 0
+        ? formData.applicable_product_ids
+        : null;
+
+      const collectionsData = formData.applies_to === "specific_collections" && formData.applicable_collections?.length > 0
+        ? formData.applicable_collections
+        : null;
+
       const couponData = {
         code: formData.code,
         description: formData.description || null,
@@ -129,6 +211,14 @@ export default function AdminCouponsPage() {
         starts_at: formData.starts_at ? new Date(formData.starts_at).toISOString() : new Date().toISOString(),
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
         is_active: formData.is_active,
+        applies_to: formData.applies_to,
+        applicable_product_ids: productIds,
+        applicable_collections: collectionsData,
+        utm_campaign: formData.utm_campaign || null,
+        utm_source: formData.utm_source || null,
+        utm_medium: formData.utm_medium || null,
+        agency_id: formData.agency_id || null,
+        channel: formData.channel || null,
       };
 
       let res;
@@ -426,6 +516,148 @@ export default function AdminCouponsPage() {
                   Active
                 </label>
               </div>
+
+              {/* Product/Collection Targeting Section */}
+              <div className="col-span-2 border-t pt-6 mt-6">
+                <h3 className="text-lg font-semibold text-[#0a1833] mb-4">
+                  Coupon Targeting
+                </h3>
+
+                <div className="space-y-4">
+                  {/* Applies To */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Apply Discount To
+                    </label>
+                    <select
+                      value={formData.applies_to}
+                      onChange={(e) => setFormData({...formData, applies_to: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833]"
+                    >
+                      <option value="all">Entire Cart (All Products)</option>
+                      <option value="specific_products">Specific Products Only</option>
+                      <option value="specific_collections">Specific Collections Only</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Choose whether this coupon applies to all products or only specific ones
+                    </p>
+                  </div>
+
+                  {/* Product Selector (conditional) */}
+                  {formData.applies_to === "specific_products" && (
+                    <SearchableMultiSelect
+                      label="Products"
+                      options={products}
+                      selected={formData.applicable_product_ids}
+                      onChange={(selected) => setFormData({...formData, applicable_product_ids: selected})}
+                      placeholder="Search products..."
+                      loading={productsLoading}
+                    />
+                  )}
+
+                  {/* Collection Selector (conditional) */}
+                  {formData.applies_to === "specific_collections" && (
+                    <SearchableMultiSelect
+                      label="Collections"
+                      options={collections}
+                      selected={formData.applicable_collections}
+                      onChange={(selected) => setFormData({...formData, applicable_collections: selected})}
+                      placeholder="Search collections..."
+                      loading={collectionsLoading}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Marketing Attribution Section */}
+              <div className="col-span-2 border-t pt-6 mt-6">
+                <h3 className="text-lg font-semibold text-[#0a1833] mb-4">
+                  Marketing Attribution
+                </h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* UTM Campaign */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      UTM Campaign
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.utm_campaign}
+                      onChange={(e) => setFormData({...formData, utm_campaign: e.target.value})}
+                      placeholder="e.g., summer2024, newyear2025"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833]"
+                    />
+                  </div>
+
+                  {/* UTM Source */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      UTM Source
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.utm_source}
+                      onChange={(e) => setFormData({...formData, utm_source: e.target.value})}
+                      placeholder="e.g., google, facebook, instagram"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833]"
+                    />
+                  </div>
+
+                  {/* UTM Medium */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      UTM Medium
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.utm_medium}
+                      onChange={(e) => setFormData({...formData, utm_medium: e.target.value})}
+                      placeholder="e.g., cpc, social, email"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833]"
+                    />
+                  </div>
+
+                  {/* Channel */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Channel
+                    </label>
+                    <select
+                      value={formData.channel}
+                      onChange={(e) => setFormData({...formData, channel: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833]"
+                    >
+                      <option value="">Select channel...</option>
+                      <option value="google-ads">Google Ads</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="email">Email Marketing</option>
+                      <option value="self-marketing">Self Marketing</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  {/* Agency */}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Agency
+                    </label>
+                    <select
+                      value={formData.agency_id}
+                      onChange={(e) => setFormData({...formData, agency_id: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833]"
+                    >
+                      <option value="">Select agency...</option>
+                      {agencies.map(agency => (
+                        <option key={agency.id} value={agency.id}>
+                          {agency.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-3 mt-6">
@@ -503,6 +735,37 @@ export default function AdminCouponsPage() {
                     {coupon.description && (
                       <p className="text-sm text-gray-500 mt-1">{coupon.description}</p>
                     )}
+
+                    {/* Referral Link */}
+                    <div className="mt-2 mb-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Link size={14} className="text-blue-600 flex-shrink-0" />
+                          <span className="text-xs text-blue-700 font-medium truncate">
+                            {typeof window !== 'undefined'
+                              ? `${window.location.origin}/?coupon=${coupon.code}`
+                              : `/?coupon=${coupon.code}`}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const link = typeof window !== 'undefined'
+                              ? `${window.location.origin}/?coupon=${coupon.code}`
+                              : `/?coupon=${coupon.code}`;
+                            navigator.clipboard.writeText(link);
+                            toast.success('Referral link copied!');
+                          }}
+                          className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-xs flex items-center gap-1 flex-shrink-0"
+                          title="Copy referral link"
+                        >
+                          <Copy size={12} />
+                          Copy
+                        </button>
+                      </div>
+                      <p className="text-xs text-blue-600 mt-1 ml-5">
+                        Share this link to auto-apply the coupon when customers visit
+                      </p>
+                    </div>
 
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mt-2">
                       {coupon.min_order_amount > 0 && (

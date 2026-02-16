@@ -40,6 +40,7 @@ async function recordOAuthUtm(email, authProvider) {
       utm_term: utmData.utm_term || null,
       landing_url: utmData.landing_url || null,
       referrer_url: null,
+      coupon_code: utmData.coupon_code || null,
     });
 
     await supabaseAdmin

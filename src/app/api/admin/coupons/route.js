@@ -81,6 +81,14 @@ export async function POST(request) {
         starts_at: coupon.starts_at || new Date().toISOString(),
         expires_at: coupon.expires_at || null,
         is_active: coupon.is_active ?? true,
+        applies_to: coupon.applies_to || "all",
+        applicable_product_ids: coupon.applicable_product_ids || null,
+        applicable_collections: coupon.applicable_collections || null,
+        utm_campaign: coupon.utm_campaign || null,
+        utm_source: coupon.utm_source || null,
+        utm_medium: coupon.utm_medium || null,
+        agency_id: coupon.agency_id || null,
+        channel: coupon.channel || null,
       })
       .select()
       .single();

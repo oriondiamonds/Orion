@@ -66,6 +66,55 @@ export async function POST(request) {
 
     const finalAmount = subtotal - discountAmount;
 
+    // ============================================
+    // Capture Attribution (for marketing tracking)
+    // ============================================
+    let attributedSource = null;
+    let attributedCampaign = null;
+    let attributedMedium = null;
+    let attributedAgencyId = null;
+
+    // Priority 1: Get attribution from coupon (if coupon used)
+    if (validatedCouponCode) {
+      try {
+        const { data: couponDetails } = await supabaseAdmin
+          .from('coupons')
+          .select('utm_source, utm_campaign, utm_medium, agency_id')
+          .eq('code', validatedCouponCode)
+          .single();
+
+        if (couponDetails) {
+          attributedSource = couponDetails.utm_source;
+          attributedCampaign = couponDetails.utm_campaign;
+          attributedMedium = couponDetails.utm_medium;
+          attributedAgencyId = couponDetails.agency_id;
+        }
+      } catch (couponAttrErr) {
+        console.warn('Failed to fetch coupon attribution:', couponAttrErr);
+        // Non-blocking: continue with order even if attribution fetch fails
+      }
+    }
+
+    // Priority 2: Fallback to customer's signup UTM if no coupon attribution
+    if (!attributedSource && customerEmail) {
+      try {
+        const { data: customer } = await supabaseAdmin
+          .from('customers')
+          .select('utm_source, utm_campaign, utm_medium')
+          .eq('email', customerEmail.toLowerCase().trim())
+          .single();
+
+        if (customer) {
+          attributedSource = customer.utm_source;
+          attributedCampaign = customer.utm_campaign;
+          attributedMedium = customer.utm_medium;
+        }
+      } catch (customerAttrErr) {
+        console.warn('Failed to fetch customer attribution:', customerAttrErr);
+        // Non-blocking: continue with order
+      }
+    }
+
     // Razorpay expects amount in paise (smallest currency unit)
     const amountInPaise = Math.round(finalAmount * 100);
 
@@ -95,6 +144,11 @@ export async function POST(request) {
       status: "pending",
       razorpay_order_id: razorpayOrder.id,
       shipping_address: shippingAddress,
+      // Attribution snapshot (immutable at order time)
+      attributed_utm_source: attributedSource,
+      attributed_utm_campaign: attributedCampaign,
+      attributed_utm_medium: attributedMedium,
+      attributed_agency_id: attributedAgencyId,
     });
 
     if (insertError) {

@@ -63,7 +63,7 @@ export function middleware(request) {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
-  // Check if any UTM params exist in the current URL
+  // Check if any UTM params or coupon exist in the current URL
   const utmData = {};
   let hasUtm = false;
 
@@ -75,7 +75,17 @@ export function middleware(request) {
     }
   }
 
-  // If UTM params found, set/overwrite the cookie (last-touch attribution)
+  // Also capture coupon code from URL (supports multiple param names)
+  const couponCode = searchParams.get('coupon') ||
+                     searchParams.get('coupon_code') ||
+                     searchParams.get('utm_coupon');
+
+  if (couponCode) {
+    utmData.coupon_code = couponCode.trim().toUpperCase();
+    hasUtm = true; // Treat coupon as trackable parameter
+  }
+
+  // If UTM params or coupon found, set/overwrite the cookie (last-touch attribution)
   if (hasUtm) {
     utmData.landing_url = request.nextUrl.pathname + request.nextUrl.search;
 

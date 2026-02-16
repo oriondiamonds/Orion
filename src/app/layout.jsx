@@ -7,6 +7,7 @@ import { Providers } from "./providers";
 import { FaWhatsapp } from "react-icons/fa6";
 import CartSyncProvider from "../components/CartSyncProvider";
 import UtmVisitTracker from "../components/UtmVisitTracker";
+import CouponCapture from "../components/CouponCapture";
 
 export const metadata = {
   title: "Orion Diamonds",
@@ -25,6 +26,7 @@ export default function RootLayout({ children }) {
 
         <Providers>
           <UtmVisitTracker />
+          <CouponCapture />
           <CartSyncProvider>{children}</CartSyncProvider>
         </Providers>
 

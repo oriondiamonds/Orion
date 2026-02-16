@@ -236,6 +236,79 @@ export default function CartPage() {
     return () => window.removeEventListener("cartUpdated", handleCartUpdate);
   }, [session]);
 
+  // Auto-apply referral coupon if captured from URL params
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!isLoggedIn) return; // Need to be logged in to use coupons
+    if (appliedCoupon) return; // Don't override existing coupon
+    if (couponCode) return; // Don't override manually entered coupon
+
+    const referralCoupon = localStorage.getItem("referral_coupon");
+    const referralCouponTime = localStorage.getItem("referral_coupon_time");
+
+    if (!referralCoupon) return;
+
+    // Check if coupon is still valid (24 hours)
+    const captureTime = referralCouponTime ? parseInt(referralCouponTime) : 0;
+    const ageMs = Date.now() - captureTime;
+    const maxAgeMs = 24 * 60 * 60 * 1000; // 24 hours
+
+    if (ageMs > maxAgeMs) {
+      // Expired, clear it
+      localStorage.removeItem("referral_coupon");
+      localStorage.removeItem("referral_coupon_time");
+      return;
+    }
+
+    // Auto-apply the referral coupon
+    setCouponCode(referralCoupon);
+    toast("🎁 Applying your referral coupon...", { duration: 2000 });
+
+    // Trigger auto-apply after a short delay (to ensure cart is loaded)
+    setTimeout(() => {
+      const applyReferralCoupon = async () => {
+        setCouponLoading(true);
+        setCouponError("");
+
+        try {
+          const response = await fetch("/api/coupon/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              code: referralCoupon,
+              cartItems,
+              customerEmail,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.valid) {
+            setAppliedCoupon(data);
+            toast.success(`✅ Coupon ${referralCoupon} applied! You save ₹${data.discountAmount.toFixed(2)}`);
+
+            // Clear from localStorage after successful application
+            localStorage.removeItem("referral_coupon");
+            localStorage.removeItem("referral_coupon_time");
+          } else {
+            setCouponError(data.error);
+            toast.error(`❌ ${data.error}`);
+            // Clear invalid coupon
+            localStorage.removeItem("referral_coupon");
+            localStorage.removeItem("referral_coupon_time");
+          }
+        } catch (err) {
+          console.error("Failed to auto-apply referral coupon:", err);
+          toast.error("Failed to apply referral coupon");
+        } finally {
+          setCouponLoading(false);
+        }
+      };
+
+      applyReferralCoupon();
+    }, 500);
+  }, [isLoggedIn, appliedCoupon, couponCode, cartItems, customerEmail]);
+
   const updateQuantity = async (variantId, newQuantity) => {
     if (newQuantity < 1) return;
 
@@ -742,7 +815,11 @@ export default function CartPage() {
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
                         placeholder="Enter code"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent uppercase"
+                        className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#0a1833] focus:border-transparent uppercase ${
+                          couponCode && !appliedCoupon
+                            ? "border-blue-400 bg-blue-50"
+                            : "border-gray-300"
+                        }`}
                       />
                       <button
                         onClick={applyCoupon}
@@ -752,6 +829,12 @@ export default function CartPage() {
                         {couponLoading ? "..." : "Apply"}
                       </button>
                     </div>
+                    {couponCode && !couponError && !couponLoading && (
+                      <p className="text-blue-600 text-xs mt-1 flex items-center gap-1">
+                        <Tag size={12} />
+                        Referral code detected - click Apply to use it
+                      </p>
+                    )}
                     {couponError && (
                       <p className="text-red-500 text-xs mt-1">{couponError}</p>
                     )}

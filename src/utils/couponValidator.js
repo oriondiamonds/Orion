@@ -56,8 +56,52 @@ export async function validateCoupon(code, cartItems, customerEmail) {
     }
   }
 
-  // 5. Calculate diamond-only subtotal and full cart subtotal
-  const diamondSubtotal = cartItems.reduce((total, item) => {
+  // 5. Filter eligible items based on coupon targeting
+  const eligibleItems = cartItems.filter((item) => {
+    // Default: all items are eligible
+    if (!coupon.applies_to || coupon.applies_to === "all") {
+      return true;
+    }
+
+    // Specific products targeting
+    if (coupon.applies_to === "specific_products") {
+      const productIds = coupon.applicable_product_ids || [];
+      // Match by productId (gid://shopify/Product/xxx) or id field
+      const itemProductId = item.productId || item.id || "";
+      return productIds.some((pid) => itemProductId.includes(pid) || itemProductId === pid);
+    }
+
+    // Specific collections targeting
+    if (coupon.applies_to === "specific_collections") {
+      const collections = coupon.applicable_collections || [];
+      // Match by collection handle or name
+      const itemCollections = item.collections || [];
+      return collections.some((targetCollection) =>
+        itemCollections.some(
+          (itemCol) =>
+            itemCol.handle === targetCollection ||
+            itemCol.title === targetCollection ||
+            itemCol === targetCollection
+        )
+      );
+    }
+
+    return false;
+  });
+
+  // If no items match the targeting, coupon is invalid for this cart
+  if (eligibleItems.length === 0) {
+    let targetingMessage = "This coupon does not apply to any items in your cart";
+    if (coupon.applies_to === "specific_products") {
+      targetingMessage = "This coupon only applies to specific products not in your cart";
+    } else if (coupon.applies_to === "specific_collections") {
+      targetingMessage = "This coupon only applies to specific collections not in your cart";
+    }
+    return { valid: false, error: targetingMessage };
+  }
+
+  // 6. Calculate diamond-only subtotal for eligible items
+  const diamondSubtotal = eligibleItems.reduce((total, item) => {
     const quantity = item.quantity || 1;
 
     // Prefer priceBreakdown.diamondPrice if available
@@ -78,7 +122,7 @@ export async function validateCoupon(code, cartItems, customerEmail) {
     return total + price * (item.quantity || 1);
   }, 0);
 
-  // 6. Check minimum order amount (uses full cart subtotal, not diamond-only)
+  // 7. Check minimum order amount (uses full cart subtotal, not diamond-only)
   if (
     coupon.min_order_amount &&
     cartSubtotal < parseFloat(coupon.min_order_amount)
@@ -89,7 +133,7 @@ export async function validateCoupon(code, cartItems, customerEmail) {
     };
   }
 
-  // 7. Calculate discount (on diamond-only subtotal)
+  // 8. Calculate discount (on diamond-only subtotal of eligible items)
   let discountAmount = 0;
 
   if (coupon.discount_type === "percentage") {
@@ -112,16 +156,31 @@ export async function validateCoupon(code, cartItems, customerEmail) {
 
   discountAmount = Math.round(discountAmount * 100) / 100;
 
-  // Build message (specify "on diamonds")
+  // Build message (specify "on diamonds" and targeting if applicable)
   let message = "";
   if (coupon.discount_type === "percentage") {
-    message = `${parseFloat(coupon.discount_value)}% off on diamonds`;
+    message = `${parseFloat(coupon.discount_value)}% off`;
     if (coupon.max_discount_amount) {
       message += ` (up to ₹${parseFloat(coupon.max_discount_amount).toLocaleString("en-IN")})`;
     }
   } else {
-    message = `₹${parseFloat(coupon.discount_value).toLocaleString("en-IN")} off on diamonds`;
+    message = `₹${parseFloat(coupon.discount_value).toLocaleString("en-IN")} off`;
   }
+
+  // Add targeting context
+  if (coupon.applies_to === "specific_products") {
+    message += ` on selected products`;
+  } else if (coupon.applies_to === "specific_collections") {
+    message += ` on selected collections`;
+  } else {
+    message += ` on diamonds`;
+  }
+
+  // Show count if partial cart
+  if (eligibleItems.length < cartItems.length) {
+    message += ` (${eligibleItems.length}/${cartItems.length} items)`;
+  }
+
   message += ` — you save ₹${discountAmount.toLocaleString("en-IN")}!`;
 
   return {
