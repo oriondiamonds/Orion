@@ -386,7 +386,7 @@ export default function CartPage() {
   const calculateSubtotal = () =>
     cartItems.reduce(
       (total, item) => {
-        const itemPrice = parseFloat(item.price) || parseFloat(item.calculatedPrice) || 0;
+        const itemPrice = parseFloat(item.calculatedPrice) || parseFloat(item.price) || parseFloat(item.priceBreakdown?.totalPrice) || 0;
         return total + itemPrice * item.quantity;
       },
       0
@@ -728,7 +728,7 @@ export default function CartPage() {
                         </div>
                       )}
                     <p className="text-lg font-bold text-[#0a1833] mt-2">
-                      ₹{(parseFloat(item.calculatedPrice) || parseFloat(item.price) || 0).toFixed(2)}
+                      ₹{(parseFloat(item.calculatedPrice) || parseFloat(item.price) || parseFloat(item.priceBreakdown?.totalPrice) || 0).toFixed(2)}
                     </p>
                   </div>
 
@@ -763,7 +763,7 @@ export default function CartPage() {
                     </div>
                     <p className="mt-4 text-lg font-bold text-[#0a1833]">
                       Total: ₹
-                      {((parseFloat(item.calculatedPrice) || parseFloat(item.price) || 0) * item.quantity).toFixed(2)}
+                      {((parseFloat(item.calculatedPrice) || parseFloat(item.price) || parseFloat(item.priceBreakdown?.totalPrice) || 0) * item.quantity).toFixed(2)}
                     </p>
                   </div>
                 </div>
