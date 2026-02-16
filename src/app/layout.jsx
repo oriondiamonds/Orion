@@ -1,4 +1,5 @@
 import "./globals.css";
+import { Suspense } from "react";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import ScrollToTop from "../components/scrolltop";
@@ -26,7 +27,9 @@ export default function RootLayout({ children }) {
 
         <Providers>
           <UtmVisitTracker />
-          <CouponCapture />
+          <Suspense fallback={null}>
+            <CouponCapture />
+          </Suspense>
           <CartSyncProvider>{children}</CartSyncProvider>
         </Providers>
 
