@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { calculateFinalPrice } from "../utils/price";
 import { formatIndianCurrency } from "../utils/formatIndianCurrency";
 
-export default function CartItemPriceBreakup({ item }) {
+export default function CartItemPriceBreakup({ item, appliedCoupon, cartSubtotal }) {
   const [isOpen, setIsOpen] = useState(false);
   const [priceData, setPriceData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -124,7 +124,32 @@ export default function CartItemPriceBreakup({ item }) {
                 <tr className="bg-gray-100 font-semibold">
                   <td className="py-1.5 text-gray-900">Total</td>
                   <td className="py-1.5 text-right text-gray-900">
-                    ₹{formatIndianCurrency(priceData.totalPrice)}
+                    {appliedCoupon && cartSubtotal > 0 ? (
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-gray-400 line-through text-xs font-normal">
+                          ₹{formatIndianCurrency(priceData.totalPrice)}
+                        </span>
+                        <span className="text-green-600">
+                          ₹{formatIndianCurrency(
+                            (() => {
+                              // For diamond-only discounts: apply coupon percentage to this item's diamond price
+                              const itemDiamondPrice = priceData.diamondPrice || 0;
+
+                              // If coupon is percentage-based and we have diamond price, apply directly
+                              if (appliedCoupon.discountType === "percentage" && itemDiamondPrice > 0) {
+                                const diamondDiscount = (itemDiamondPrice * appliedCoupon.discountValue) / 100;
+                                return priceData.totalPrice - diamondDiscount;
+                              }
+
+                              // Fallback: distribute total discount proportionally
+                              return priceData.totalPrice - (priceData.totalPrice / cartSubtotal) * appliedCoupon.discountAmount;
+                            })()
+                          )}
+                        </span>
+                      </div>
+                    ) : (
+                      <span>₹{formatIndianCurrency(priceData.totalPrice)}</span>
+                    )}
                   </td>
                 </tr>
               </tbody>

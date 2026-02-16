@@ -768,7 +768,7 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                <CartItemPriceBreakup item={item} />
+                <CartItemPriceBreakup item={item} appliedCoupon={appliedCoupon} cartSubtotal={calculateSubtotal()} />
               </div>
             ))}
           </div>
@@ -795,11 +795,18 @@ export default function CartPage() {
                   </div>
                 )}
 
-                <div className="flex justify-between text-base font-bold text-[#0a1833] border-t pt-3">
+                <div className="flex justify-between items-center text-base font-bold text-[#0a1833] border-t pt-3">
                   <span>Total</span>
-                  <span>
-                    ₹{(calculateSubtotal() - (appliedCoupon?.discountAmount || 0)).toFixed(2)}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {appliedCoupon && (
+                      <span className="text-gray-400 line-through text-sm font-normal">
+                        ₹{calculateSubtotal().toFixed(2)}
+                      </span>
+                    )}
+                    <span className={appliedCoupon ? "text-green-600" : ""}>
+                      ₹{(calculateSubtotal() - (appliedCoupon?.discountAmount || 0)).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
