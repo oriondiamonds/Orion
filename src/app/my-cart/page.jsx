@@ -242,6 +242,7 @@ export default function CartPage() {
     if (!isLoggedIn) return; // Need to be logged in to use coupons
     if (appliedCoupon) return; // Don't override existing coupon
     if (couponCode) return; // Don't override manually entered coupon
+    if (cartItems.length === 0) return; // Wait for cart to load first
 
     const referralCoupon = localStorage.getItem("referral_coupon");
     const referralCouponTime = localStorage.getItem("referral_coupon_time");
