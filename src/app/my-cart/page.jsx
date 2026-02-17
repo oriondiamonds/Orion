@@ -806,7 +806,7 @@ export default function CartPage() {
                           );
                         }
 
-                        if (appliedCoupon && appliedCoupon.discountAmount > 0 && cartSubtotal > 0) {
+                        if (appliedCoupon && appliedCoupon.discountAmount > 0 && calculateSubtotal() > 0) {
                           const itemShare = (originalTotal / calculateSubtotal()) * appliedCoupon.discountAmount;
                           const discountedTotal = originalTotal - itemShare;
                           return (
