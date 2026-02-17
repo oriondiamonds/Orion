@@ -727,9 +727,31 @@ export default function CartPage() {
                           ))}
                         </div>
                       )}
-                    <p className="text-lg font-bold text-[#0a1833] mt-2">
-                      ₹{(parseFloat(item.calculatedPrice) || parseFloat(item.price) || parseFloat(item.priceBreakdown?.totalPrice) || 0).toFixed(2)}
-                    </p>
+                    {(() => {
+                      const unitPrice = parseFloat(item.calculatedPrice) || parseFloat(item.price) || parseFloat(item.priceBreakdown?.totalPrice) || 0;
+                      const diamondPrice = parseFloat(item.priceBreakdown?.diamondPrice) || 0;
+
+                      if (appliedCoupon && diamondPrice > 0 && appliedCoupon.discountType === "percentage") {
+                        const diamondDiscount = (diamondPrice * appliedCoupon.discountValue) / 100;
+                        const discountedPrice = unitPrice - diamondDiscount;
+                        return (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-gray-400 line-through text-sm font-normal">
+                              ₹{unitPrice.toFixed(2)}
+                            </span>
+                            <span className="text-lg font-bold text-green-600">
+                              ₹{discountedPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <p className="text-lg font-bold text-[#0a1833] mt-2">
+                          ₹{unitPrice.toFixed(2)}
+                        </p>
+                      );
+                    })()}
                   </div>
 
                   <div className="flex sm:flex-col items-center justify-between gap-3 sm:gap-2 w-full sm:w-auto">
@@ -761,10 +783,48 @@ export default function CartPage() {
                         <Plus size={16} />
                       </button>
                     </div>
-                    <p className="mt-4 text-lg font-bold text-[#0a1833]">
-                      Total: ₹
-                      {((parseFloat(item.calculatedPrice) || parseFloat(item.price) || parseFloat(item.priceBreakdown?.totalPrice) || 0) * item.quantity).toFixed(2)}
-                    </p>
+                    <div className="mt-4 text-lg font-bold text-[#0a1833]">
+                      {(() => {
+                        const unitPrice = parseFloat(item.calculatedPrice) || parseFloat(item.price) || parseFloat(item.priceBreakdown?.totalPrice) || 0;
+                        const originalTotal = unitPrice * item.quantity;
+                        const diamondPrice = parseFloat(item.priceBreakdown?.diamondPrice) || 0;
+
+                        if (appliedCoupon && diamondPrice > 0 && appliedCoupon.discountType === "percentage") {
+                          const diamondDiscount = (diamondPrice * appliedCoupon.discountValue) / 100;
+                          const discountedUnit = unitPrice - diamondDiscount;
+                          const discountedTotal = discountedUnit * item.quantity;
+                          return (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span>Total:</span>
+                              <span className="text-gray-400 line-through text-sm font-normal">
+                                ₹{originalTotal.toFixed(2)}
+                              </span>
+                              <span className="text-green-600">
+                                ₹{discountedTotal.toFixed(2)}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        if (appliedCoupon && appliedCoupon.discountAmount > 0 && cartSubtotal > 0) {
+                          const itemShare = (originalTotal / calculateSubtotal()) * appliedCoupon.discountAmount;
+                          const discountedTotal = originalTotal - itemShare;
+                          return (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span>Total:</span>
+                              <span className="text-gray-400 line-through text-sm font-normal">
+                                ₹{originalTotal.toFixed(2)}
+                              </span>
+                              <span className="text-green-600">
+                                ₹{discountedTotal.toFixed(2)}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        return <span>Total: ₹{originalTotal.toFixed(2)}</span>;
+                      })()}
+                    </div>
                   </div>
                 </div>
 

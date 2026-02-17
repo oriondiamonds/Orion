@@ -93,11 +93,13 @@ export async function POST(request) {
     });
 
     // Compute aggregated stats
+    const eventVisits = events.filter((e) => e.event_type === "visit").length;
     const stats = {
       totalEvents: events.length,
-      totalVisits: (visits || []).length,
+      totalVisits: (visits || []).length + eventVisits,
       signups: events.filter((e) => e.event_type === "signup").length,
       logins: events.filter((e) => e.event_type === "login").length,
+      eventVisits,
       bySource: {},
       byCampaign: {},
       byMedium: {},
@@ -105,37 +107,31 @@ export async function POST(request) {
     };
 
     events.forEach((e) => {
+      const eventBucket = e.event_type === "signup" ? "signups" : e.event_type === "login" ? "logins" : "visits";
+
       const source = e.utm_source || "(direct)";
       if (!stats.bySource[source])
         stats.bySource[source] = { signups: 0, logins: 0, total: 0, visits: 0 };
       stats.bySource[source].total++;
-      stats.bySource[source][
-        e.event_type === "signup" ? "signups" : "logins"
-      ]++;
+      stats.bySource[source][eventBucket]++;
 
       const campaign = e.utm_campaign || "(none)";
       if (!stats.byCampaign[campaign])
         stats.byCampaign[campaign] = { signups: 0, logins: 0, total: 0, visits: 0 };
       stats.byCampaign[campaign].total++;
-      stats.byCampaign[campaign][
-        e.event_type === "signup" ? "signups" : "logins"
-      ]++;
+      stats.byCampaign[campaign][eventBucket]++;
 
       const medium = e.utm_medium || "(none)";
       if (!stats.byMedium[medium])
         stats.byMedium[medium] = { signups: 0, logins: 0, total: 0, visits: 0 };
       stats.byMedium[medium].total++;
-      stats.byMedium[medium][
-        e.event_type === "signup" ? "signups" : "logins"
-      ]++;
+      stats.byMedium[medium][eventBucket]++;
 
-      const provider = e.auth_provider || "email";
+      const provider = e.auth_provider || "direct";
       if (!stats.byProvider[provider])
-        stats.byProvider[provider] = { signups: 0, logins: 0, total: 0 };
+        stats.byProvider[provider] = { signups: 0, logins: 0, visits: 0, total: 0 };
       stats.byProvider[provider].total++;
-      stats.byProvider[provider][
-        e.event_type === "signup" ? "signups" : "logins"
-      ]++;
+      stats.byProvider[provider][eventBucket]++;
     });
 
     // Merge visit counts into bySource, byCampaign, byMedium
@@ -379,6 +375,8 @@ export async function POST(request) {
         stats.byCoupon[code].signups++;
       } else if (event.event_type === 'login') {
         stats.byCoupon[code].logins++;
+      } else if (event.event_type === 'visit') {
+        stats.byCoupon[code].visits++;
       }
 
       // Update campaign/source from event if not already set
@@ -525,6 +523,8 @@ export async function POST(request) {
         stats.byAgency[agencyName].signups++;
       } else if (event.event_type === 'login') {
         stats.byAgency[agencyName].logins++;
+      } else if (event.event_type === 'visit') {
+        stats.byAgency[agencyName].visits++;
       }
       stats.byAgency[agencyName].coupons.add(event.coupon_code);
     });
@@ -594,14 +594,36 @@ export async function POST(request) {
     });
 
     // ============================================
-    // PAGINATED RECENT EVENTS
+    // PAGINATED RECENT EVENTS (merge visits + auth events)
     // ============================================
+    // Convert utm_visits into event-shaped objects
+    const visitEvents = (visits || []).map((v) => ({
+      id: v.id,
+      customer_email: "anonymous",
+      event_type: "visit",
+      auth_provider: "direct",
+      utm_source: v.utm_source,
+      utm_medium: v.utm_medium,
+      utm_campaign: v.utm_campaign,
+      utm_content: v.utm_content,
+      utm_term: v.utm_term,
+      landing_url: v.landing_url,
+      referrer_url: v.referrer_url,
+      coupon_code: v.coupon_code,
+      created_at: v.created_at,
+    }));
+
+    // Merge and sort by date (newest first)
+    const allEvents = [...events, ...visitEvents].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+
     const eventsOffset = (eventsPage - 1) * eventsLimit;
-    stats.recentEvents = events.slice(eventsOffset, eventsOffset + eventsLimit);
-    stats.totalEventsCount = events.length;
+    stats.recentEvents = allEvents.slice(eventsOffset, eventsOffset + eventsLimit);
+    stats.totalEventsCount = allEvents.length;
     stats.eventsPage = eventsPage;
     stats.eventsLimit = eventsLimit;
-    stats.eventsTotalPages = Math.ceil(events.length / eventsLimit);
+    stats.eventsTotalPages = Math.ceil(allEvents.length / eventsLimit);
 
     // ============================================
     // PAGINATED RECENT ORDERS

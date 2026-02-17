@@ -10,10 +10,16 @@ export async function POST(request) {
       return NextResponse.json({ success: true });
     }
 
-    if (!utmData.utm_source && !utmData.utm_campaign && !utmData.utm_medium) {
+    // Track if ANY trackable param exists
+    const hasTrackableData = utmData.utm_source || utmData.utm_medium ||
+      utmData.utm_campaign || utmData.utm_content || utmData.utm_term ||
+      utmData.coupon_code || utmData.landing_url || utmData.referrer_url;
+
+    if (!hasTrackableData) {
       return NextResponse.json({ success: true });
     }
 
+    // Record in utm_visits table (shown as "visit" events in tracking dashboard)
     await supabaseAdmin.from("utm_visits").insert({
       utm_source: utmData.utm_source || null,
       utm_medium: utmData.utm_medium || null,

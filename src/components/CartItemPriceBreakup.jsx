@@ -100,7 +100,18 @@ export default function CartItemPriceBreakup({ item, appliedCoupon, cartSubtotal
                 <tr className="border-b border-gray-200">
                   <td className="py-1.5 text-gray-600">Diamond Price</td>
                   <td className="py-1.5 text-right font-medium">
-                    ₹{formatIndianCurrency(priceData.diamondPrice)}
+                    {appliedCoupon && appliedCoupon.discountType === "percentage" && priceData.diamondPrice > 0 ? (
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="text-gray-400 line-through text-xs font-normal">
+                          ₹{formatIndianCurrency(priceData.diamondPrice)}
+                        </span>
+                        <span className="text-green-600">
+                          ₹{formatIndianCurrency(priceData.diamondPrice - (priceData.diamondPrice * appliedCoupon.discountValue) / 100)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span>₹{formatIndianCurrency(priceData.diamondPrice)}</span>
+                    )}
                   </td>
                 </tr>
                 <tr className="border-b border-gray-200">
