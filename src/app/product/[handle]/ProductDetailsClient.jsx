@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   ShoppingCart,
   Heart,
@@ -18,6 +18,7 @@ import {
   ArrowLeftRight,
   ScrollText,
   BadgeCheck,
+  Zap,
 } from "lucide-react";
 import { getProductByHandle } from "../../../queries/products";
 import ProductAccordion from "../../../components/accordian";
@@ -30,6 +31,7 @@ import { syncWishlistToServer, removeWishlistItemFromServer } from "../../../uti
 
 export default function ProductDetails() {
   const modalRef = useRef(null);
+  const router = useRouter();
   const { handle } = useParams();
   const searchParams = useSearchParams();
   const karatFromUrl = searchParams.get("karat");
@@ -202,6 +204,65 @@ export default function ProductDetails() {
         console.error("Server cart sync failed:", err);
       }
     }
+  };
+
+  const buyNow = () => {
+    if (!selectedVariant) {
+      toast.error("Please select a variant");
+      return;
+    }
+
+    if (
+      (handle?.toLowerCase().endsWith("-ring") ||
+        handle?.toLowerCase().endsWith("-band")) &&
+      !selectedOptions["Ring Size"]
+    ) {
+      toast.error("Please select a ring size");
+      return;
+    }
+
+    if (
+      handle?.toLowerCase().endsWith("-bracelet") &&
+      !selectedOptions["Wrist Size"]
+    ) {
+      toast.error("Please select a wrist size");
+      return;
+    }
+
+    const finalSelectedOptions = [
+      ...Object.entries(selectedOptions).map(([name, value]) => ({
+        name,
+        value,
+      })),
+    ];
+
+    if (
+      (handle?.toLowerCase().endsWith("-ring") ||
+        handle?.toLowerCase().endsWith("-band")) &&
+      engravingText.trim()
+    ) {
+      finalSelectedOptions.push({
+        name: "Engraving",
+        value: engravingText.trim(),
+      });
+    }
+
+    const buyNowItem = {
+      variantId: selectedVariant.id,
+      handle: product.handle,
+      title: product.title,
+      variantTitle: selectedVariant.title,
+      image: selectedVariant.image?.url || product.featuredImage?.url,
+      price: parseFloat(totalPrice),
+      calculatedPrice: parseFloat(totalPrice),
+      currencyCode: selectedVariant.price.currencyCode,
+      quantity: quantity,
+      selectedOptions: finalSelectedOptions,
+      priceBreakdown: priceBreakdown || null,
+    };
+
+    sessionStorage.setItem("buyNowItem", JSON.stringify(buyNowItem));
+    router.push("/checkout?source=buynow");
   };
 
   useEffect(() => {
@@ -872,7 +933,7 @@ export default function ProductDetails() {
               </button>
             </div>
 
-            {/* Add to Cart */}
+            {/* Add to Cart & Buy Now */}
             <div className="flex gap-3 mt-4">
               <button
                 onClick={addToCart}
@@ -880,6 +941,13 @@ export default function ProductDetails() {
               >
                 <ShoppingCart size={20} />
                 Add to Cart
+              </button>
+              <button
+                onClick={buyNow}
+                className="flex-1 cursor-pointer bg-[#0a1833] text-white py-3 rounded-full flex items-center justify-center gap-2 hover:bg-[#0a1833]/90 transition-colors"
+              >
+                <Zap size={20} />
+                Buy Now
               </button>
 
               {/* Wishlist Button */}

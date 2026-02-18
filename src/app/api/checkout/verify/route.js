@@ -15,6 +15,7 @@ export async function POST(request) {
       razorpay_payment_id,
       razorpay_signature,
       customerEmail,
+      source,
     } = await request.json();
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -135,8 +136,8 @@ export async function POST(request) {
       // Don't fail the payment verification for notification errors
     }
 
-    // Clear server cart
-    if (customerEmail) {
+    // Clear server cart (only for cart flow, not buy-now)
+    if (customerEmail && source !== "buynow") {
       await supabaseAdmin
         .from("carts")
         .delete()
