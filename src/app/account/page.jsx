@@ -191,6 +191,10 @@ export default function AccountPage() {
   const handleLogout = async () => {
     await signOut({ redirect: false });
     localStorage.removeItem("customer_email");
+    localStorage.setItem("cart", JSON.stringify([]));
+    localStorage.setItem("wishlist", JSON.stringify([]));
+    window.dispatchEvent(new Event("cartUpdated"));
+    window.dispatchEvent(new Event("wishlistUpdated"));
     router.push("/login");
   };
 
