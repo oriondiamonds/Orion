@@ -15,7 +15,27 @@ const DEFAULT_CONFIG = {
     greaterThan1ct: {
       multiplier: 2.7,
       flatAddition: 0,
-      description: "For diamonds ≥ 1ct: multiply by 2.7",
+      description: "For diamonds ≥ 1ct and < 2ct: multiply by 2.7",
+    },
+    greaterThan2ct: {
+      multiplier: 2.8,
+      flatAddition: 0,
+      description: "For diamonds ≥ 2ct and < 3ct: multiply by 2.8",
+    },
+    greaterThan3ct: {
+      multiplier: 2.9,
+      flatAddition: 0,
+      description: "For diamonds ≥ 3ct and < 4ct: multiply by 2.9",
+    },
+    greaterThan4ct: {
+      multiplier: 3.0,
+      flatAddition: 0,
+      description: "For diamonds ≥ 4ct and < 5ct: multiply by 3.0",
+    },
+    greaterThan5ct: {
+      multiplier: 3.2,
+      flatAddition: 0,
+      description: "For diamonds ≥ 5ct: multiply by 3.2",
     },
     baseFees: {
       fee1: 150,
@@ -50,7 +70,7 @@ export async function POST(request) {
     if (!password) {
       return NextResponse.json(
         { error: "Password is required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -59,7 +79,7 @@ export async function POST(request) {
       console.log("❌ Password mismatch!");
       return NextResponse.json(
         { error: "Invalid admin password" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -106,7 +126,7 @@ export async function POST(request) {
     console.error("Error resetting config:", error);
     return NextResponse.json(
       { error: "Failed to reset configuration" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

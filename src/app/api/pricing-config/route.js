@@ -17,7 +17,27 @@ const DEFAULT_CONFIG = {
     greaterThan1ct: {
       multiplier: 2.7,
       flatAddition: 0,
-      description: "For diamonds ≥ 1ct: multiply by 2.7",
+      description: "For diamonds ≥ 1ct and < 2ct: multiply by 2.7",
+    },
+    greaterThan2ct: {
+      multiplier: 2.8,
+      flatAddition: 0,
+      description: "For diamonds ≥ 2ct and < 3ct: multiply by 2.8",
+    },
+    greaterThan3ct: {
+      multiplier: 2.9,
+      flatAddition: 0,
+      description: "For diamonds ≥ 3ct and < 4ct: multiply by 2.9",
+    },
+    greaterThan4ct: {
+      multiplier: 3.0,
+      flatAddition: 0,
+      description: "For diamonds ≥ 4ct and < 5ct: multiply by 3.0",
+    },
+    greaterThan5ct: {
+      multiplier: 3.2,
+      flatAddition: 0,
+      description: "For diamonds ≥ 5ct: multiply by 3.2",
     },
     baseFees: {
       fee1: 150,
@@ -51,6 +71,26 @@ function toResponseShape(row) {
   };
 }
 
+// Ensure legacy configs without the new tiers get them populated with defaults
+function migrateConfig(config) {
+  const dm = config.diamondMargins || {};
+  const defaultDm = DEFAULT_CONFIG.diamondMargins;
+
+  return {
+    ...config,
+    diamondMargins: {
+      ...dm,
+      lessThan1ct: dm.lessThan1ct || defaultDm.lessThan1ct,
+      greaterThan1ct: dm.greaterThan1ct || defaultDm.greaterThan1ct,
+      greaterThan2ct: dm.greaterThan2ct || defaultDm.greaterThan2ct,
+      greaterThan3ct: dm.greaterThan3ct || defaultDm.greaterThan3ct,
+      greaterThan4ct: dm.greaterThan4ct || defaultDm.greaterThan4ct,
+      greaterThan5ct: dm.greaterThan5ct || defaultDm.greaterThan5ct,
+      baseFees: dm.baseFees || defaultDm.baseFees,
+    },
+  };
+}
+
 // GET - Fetch current configuration (public)
 export async function GET() {
   try {
@@ -71,12 +111,14 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json(toResponseShape(data));
+    // Migrate and return — ensures new tiers exist even for old DB rows
+    const shaped = toResponseShape(data);
+    return NextResponse.json(migrateConfig(shaped));
   } catch (error) {
     console.error("Error loading config:", error);
     return NextResponse.json(
       { error: "Failed to load configuration" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -89,6 +131,7 @@ export async function POST(request) {
 
     console.log("=== PRICING-CONFIG POST ===");
     console.log("Password received:", password ? "***" : "EMPTY");
+    console.log(ADMIN_PASSWORD);
     console.log("Match:", String(password || "").trim() === ADMIN_PASSWORD);
 
     // Verify password
@@ -96,14 +139,14 @@ export async function POST(request) {
       console.log("❌ Password mismatch!");
       return NextResponse.json(
         { error: "Invalid admin password" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     if (!newConfig || !newConfig.diamondMargins || !newConfig.makingCharges) {
       return NextResponse.json(
         { error: "Invalid configuration structure" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -136,13 +179,13 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      config: toResponseShape(data),
+      config: migrateConfig(toResponseShape(data)),
     });
   } catch (error) {
     console.error("Error saving config:", error);
     return NextResponse.json(
       { error: "Failed to save configuration" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
