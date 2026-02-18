@@ -308,7 +308,7 @@ export default function Landing() {
               <div className="text-right mt-8">
                 <p className="text-[#b49c73] font-semibold">Founder</p>
                 <p className="text-[#b49c73] font-semibold text-lg">
-                  – Vandana Jain
+                  – Dr. Vandana Jain
                 </p>
               </div>
             </div>
