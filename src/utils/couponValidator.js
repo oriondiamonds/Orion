@@ -1,12 +1,12 @@
 import { supabaseAdmin } from "./supabase-admin.js";
 
 export async function validateCoupon(code, cartItems, customerEmail) {
-  if (!code || !cartItems || !customerEmail) {
+  if (!code || !cartItems) {
     return { valid: false, error: "Missing required fields" };
   }
 
   const normalizedCode = code.toUpperCase().trim();
-  const normalizedEmail = customerEmail.toLowerCase().trim();
+  const normalizedEmail = customerEmail ? customerEmail.toLowerCase().trim() : null;
 
   // 1. Look up coupon
   const { data: coupon, error: couponError } = await supabaseAdmin
@@ -43,8 +43,8 @@ export async function validateCoupon(code, cartItems, customerEmail) {
     }
   }
 
-  // 4. Check per-customer limit
-  if (coupon.per_customer_limit !== null) {
+  // 4. Check per-customer limit (only when email is known)
+  if (normalizedEmail && coupon.per_customer_limit !== null) {
     const { count, error: custCountError } = await supabaseAdmin
       .from("coupon_usages")
       .select("id", { count: "exact", head: true })

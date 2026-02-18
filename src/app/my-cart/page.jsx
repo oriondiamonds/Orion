@@ -90,7 +90,6 @@ export default function CartPage() {
   // Auto-apply referral coupon if captured from URL params
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!isLoggedIn) return;
     if (appliedCoupon) return;
     if (couponCode) return;
     if (cartItems.length === 0) return;
@@ -152,6 +151,46 @@ export default function CartPage() {
       applyReferralCoupon();
     }, 500);
   }, [isLoggedIn, appliedCoupon, couponCode, cartItems, customerEmail]);
+
+  // Restore coupon code that was saved before login redirect
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!isLoggedIn) return;
+    if (appliedCoupon) return;
+
+    const pending = sessionStorage.getItem("pendingCoupon");
+    if (!pending) return;
+
+    sessionStorage.removeItem("pendingCoupon");
+    setCouponCode(pending);
+    // Auto-apply after a brief tick so state has settled
+    setTimeout(async () => {
+      setCouponLoading(true);
+      setCouponError("");
+      try {
+        const response = await fetch("/api/coupon/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: pending,
+            cartItems,
+            customerEmail,
+          }),
+        });
+        const data = await response.json();
+        if (data.valid) {
+          setAppliedCoupon(data);
+          toast.success(`Coupon ${pending} applied! You save ₹${data.discountAmount.toFixed(2)}`);
+        } else {
+          setCouponError(data.error);
+        }
+      } catch {
+        setCouponError("Failed to restore coupon");
+      } finally {
+        setCouponLoading(false);
+      }
+    }, 300);
+  }, [isLoggedIn]);
 
   const updateQuantity = async (variantId, newQuantity) => {
     if (newQuantity < 1) return;
@@ -239,11 +278,6 @@ export default function CartPage() {
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
 
-    if (!isLoggedIn) {
-      setCouponError("Please login to use coupons");
-      return;
-    }
-
     setCouponLoading(true);
     setCouponError("");
 
@@ -284,6 +318,10 @@ export default function CartPage() {
 
   const handleProceedToCheckout = () => {
     if (!isLoggedIn) {
+      // Save the applied coupon code so it can be restored after login
+      if (couponCode.trim()) {
+        sessionStorage.setItem("pendingCoupon", couponCode.trim());
+      }
       toast.error("Please login to proceed to checkout");
       router.push("/login");
       return;
@@ -341,13 +379,26 @@ export default function CartPage() {
                 className="bg-white rounded-xl shadow-md p-4 sm:p-6"
               >
                 <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="w-28 h-28 sm:w-24 sm:h-24 object-cover rounded-md"
-                  />
+                  {(() => {
+                    const karat = item.selectedOptions?.find(o => o.name === "Gold Karat")?.value || "10K";
+                    const productUrl = `/product/${item.handle}?karat=${karat}`;
+                    return (
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="w-28 h-28 sm:w-24 sm:h-24 object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => router.push(productUrl)}
+                      />
+                    );
+                  })()}
                   <div className="flex-1 w-full text-center sm:text-left">
-                    <h3 className="font-semibold text-lg text-[#0a1833]">
+                    <h3
+                      className="font-semibold text-lg text-[#0a1833] cursor-pointer hover:underline"
+                      onClick={() => {
+                        const karat = item.selectedOptions?.find(o => o.name === "Gold Karat")?.value || "10K";
+                        router.push(`/product/${item.handle}?karat=${karat}`);
+                      }}
+                    >
                       {item.title}
                     </h3>
                     {item.variantTitle &&

@@ -5,7 +5,7 @@ export async function POST(request) {
   try {
     const { code, cartItems, customerEmail } = await request.json();
 
-    if (!code || !cartItems || !customerEmail) {
+    if (!code || !cartItems) {
       return NextResponse.json(
         { valid: false, error: "Missing required fields" },
         { status: 400 }
