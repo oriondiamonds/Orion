@@ -27,7 +27,10 @@ import { formatINR } from "../../../utils/formatIndianCurrency";
 import { useSession } from "next-auth/react";
 import { syncCartToServer } from "../../../utils/cartSync";
 import { markCartLocallyModified } from "../../../utils/cartCleanup";
-import { syncWishlistToServer, removeWishlistItemFromServer } from "../../../utils/wishlistSync";
+import {
+  syncWishlistToServer,
+  removeWishlistItemFromServer,
+} from "../../../utils/wishlistSync";
 
 export default function ProductDetails() {
   const modalRef = useRef(null);
@@ -58,7 +61,12 @@ export default function ProductDetails() {
   const totalThumbs = (product?.images?.edges?.length || 0) + 1;
 
   const [engravingText, setEngravingText] = useState("");
+
+  // ============================================
+  // PRICE DISPLAY HANDLER
+  // ============================================
   const handlePriceData = (data) => {
+    console.log("🎯 [PRODUCT DETAIL] Price data received:", data);
     setTotalPrice(data.totalPrice);
     setPriceBreakdown(data);
   };
@@ -85,6 +93,7 @@ export default function ProductDetails() {
       text: "BIS Hallmarked Gold",
     },
   ];
+
   const addToCart = async () => {
     if (!selectedVariant) {
       toast.error("Please select a variant");
@@ -113,7 +122,7 @@ export default function ProductDetails() {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
     const existingItemIndex = cart.findIndex(
-      (item) => item.variantId === selectedVariant.id
+      (item) => item.variantId === selectedVariant.id,
     );
 
     // ----- SELECTED OPTIONS ARRAY -----
@@ -158,7 +167,7 @@ export default function ProductDetails() {
       // merge engraving
       if (engravingText.trim()) {
         const engravingExists = cart[existingItemIndex].selectedOptions.some(
-          (opt) => opt.name === "Engraving"
+          (opt) => opt.name === "Engraving",
         );
 
         if (engravingExists) {
@@ -167,7 +176,7 @@ export default function ProductDetails() {
           ].selectedOptions.map((opt) =>
             opt.name === "Engraving"
               ? { name: "Engraving", value: engravingText.trim() }
-              : opt
+              : opt,
           );
         } else {
           cart[existingItemIndex].selectedOptions.push({
@@ -189,7 +198,7 @@ export default function ProductDetails() {
 
     toast.success(`${quantity} × ${product.title} added to cart!`);
 
-    // ----- SYNC TO MONGODB -----
+    // ----- SYNC TO SERVER -----
     const customerEmail =
       session?.user?.email ||
       (typeof window !== "undefined"
@@ -268,11 +277,13 @@ export default function ProductDetails() {
   useEffect(() => {
     fetchProduct();
   }, [handle]);
+
   useEffect(() => {
     if (isModalOpen && modalRef.current) {
       modalRef.current.focus();
     }
   }, [isModalOpen]);
+
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = "hidden";
@@ -296,10 +307,10 @@ export default function ProductDetails() {
     // Listen for wishlist updates
     const handleWishlistUpdate = () => {
       const updatedWishlist = JSON.parse(
-        localStorage.getItem("wishlist") || "[]"
+        localStorage.getItem("wishlist") || "[]",
       );
       const stillInWishlist = updatedWishlist.some(
-        (item) => item.id === product.id
+        (item) => item.id === product.id,
       );
       setIsWishlisted(stillInWishlist);
     };
@@ -309,15 +320,15 @@ export default function ProductDetails() {
     return () => {
       window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
     };
-  }, [product?.id]); // Use optional chaining in dependency
+  }, [product?.id]);
 
   useEffect(() => {
     if (!selectedOptions["Gold Color"] || !product?.images?.edges) return;
 
     const colorImageMap = {
-      "White Gold": 0, // Index 0 = first image (1-4 range)
-      "Rose Gold": 4, // Index 4 = fifth image (5-8 range)
-      "Yellow Gold": 8, // Index 8 = ninth image (9-12 range)
+      "White Gold": 0,
+      "Rose Gold": 4,
+      "Yellow Gold": 8,
     };
 
     const startIndex = colorImageMap[selectedOptions["Gold Color"]];
@@ -325,10 +336,9 @@ export default function ProductDetails() {
       const imageUrl = product.images.edges[startIndex].node.url;
       setSelectedImage(imageUrl);
 
-      // Scroll thumbnail into view
       setTimeout(() => {
         const thumbnail = document.querySelector(
-          `button[data-image-url="${imageUrl}"]`
+          `button[data-image-url="${imageUrl}"]`,
         );
         if (thumbnail) {
           thumbnail.scrollIntoView({
@@ -354,15 +364,15 @@ export default function ProductDetails() {
 
         setSelectedImage(
           productData?.images?.edges?.[0]?.node?.url ||
-            productData?.featuredImage?.url
+            productData?.featuredImage?.url,
         );
 
         const defaultVariant =
           productData.variants.edges.find(({ node }) =>
             node.selectedOptions.some(
-              (opt) => opt.name === "Gold Color" && opt.value === "White Gold"
-            )
-          )?.node || productData.variants.edges[0]?.node; // Fallback to first if Yellow Gold not found
+              (opt) => opt.name === "Gold Color" && opt.value === "White Gold",
+            ),
+          )?.node || productData.variants.edges[0]?.node;
 
         if (defaultVariant) {
           const initialOptions = {};
@@ -370,14 +380,13 @@ export default function ProductDetails() {
             initialOptions[option.name] = option.value;
           });
 
-          // Override Gold Karat if passed from collection page
           if (karatFromUrl && initialOptions["Gold Karat"]) {
             initialOptions["Gold Karat"] = karatFromUrl;
             const matchingVariant = productData.variants.edges.find(
               ({ node }) =>
                 node.selectedOptions.every(
-                  (opt) => initialOptions[opt.name] === opt.value
-                )
+                  (opt) => initialOptions[opt.name] === opt.value,
+                ),
             )?.node;
             setSelectedVariant(matchingVariant || defaultVariant);
           } else {
@@ -404,8 +413,8 @@ export default function ProductDetails() {
 
     const variant = product.variants.edges.find(({ node }) =>
       node.selectedOptions.every(
-        (opt) => newSelectedOptions[opt.name] === opt.value
-      )
+        (opt) => newSelectedOptions[opt.name] === opt.value,
+      ),
     )?.node;
 
     if (variant) setSelectedVariant(variant);
@@ -430,7 +439,6 @@ export default function ProductDetails() {
     const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
 
     if (isWishlisted) {
-      // Remove from wishlist
       const newWishlist = wishlist.filter((item) => item.id !== product.id);
       localStorage.setItem("wishlist", JSON.stringify(newWishlist));
       setIsWishlisted(false);
@@ -438,12 +446,14 @@ export default function ProductDetails() {
 
       window.dispatchEvent(new Event("wishlistUpdated"));
 
-      // Sync to server if logged in (await and report failures)
       if (session?.user?.email) {
         try {
           const res = await syncWishlistToServer(session.user.email);
           if (!res || res.success === false) {
-            console.error("Failed to sync wishlist to server:", res?.error || res);
+            console.error(
+              "Failed to sync wishlist to server:",
+              res?.error || res,
+            );
             toast.error("Failed to sync wishlist to server");
           }
         } catch (err) {
@@ -477,12 +487,14 @@ export default function ProductDetails() {
       toast.success("Added to wishlist!");
       window.dispatchEvent(new Event("wishlistUpdated"));
 
-      // Sync to server if logged in (await and report failures)
       if (session?.user?.email) {
         try {
           const res = await syncWishlistToServer(session.user.email);
           if (!res || res.success === false) {
-            console.error("Failed to sync wishlist to server:", res?.error || res);
+            console.error(
+              "Failed to sync wishlist to server:",
+              res?.error || res,
+            );
             toast.error("Failed to sync wishlist to server");
           }
         } catch (err) {
@@ -514,10 +526,10 @@ export default function ProductDetails() {
       case "facebook":
         window.open(
           `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-            url
+            url,
           )}`,
           "_blank",
-          "width=600,height=400"
+          "width=600,height=400",
         );
         setShowShareMenu(false);
         break;
@@ -525,10 +537,10 @@ export default function ProductDetails() {
       case "twitter":
         window.open(
           `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-            text
+            text,
           )}&url=${encodeURIComponent(url)}`,
           "_blank",
-          "width=600,height=400"
+          "width=600,height=400",
         );
         setShowShareMenu(false);
         break;
@@ -536,7 +548,7 @@ export default function ProductDetails() {
       case "whatsapp":
         window.open(
           `https://wa.me/?text=${encodeURIComponent(text + " " + url)}`,
-          "_blank"
+          "_blank",
         );
         setShowShareMenu(false);
         break;
@@ -565,13 +577,12 @@ export default function ProductDetails() {
   if (error) return <p className="text-center mt-10 text-red-600">{error}</p>;
   if (!product) return <p className="text-center mt-10">Product not found</p>;
 
-  // Get all images as an array
   const allImages = [
     ...(product.images?.edges?.map(({ node }) => node.url) || []),
     "/dct.jpg",
   ];
   const currentImageIndex = allImages.indexOf(
-    selectedImage || selectedVariant?.image?.url || product.featuredImage?.url
+    selectedImage || selectedVariant?.image?.url || product.featuredImage?.url,
   );
 
   let touchStartX = 0;
@@ -589,9 +600,9 @@ export default function ProductDetails() {
     const swipeDistance = touchEndX - touchStartX;
     if (Math.abs(swipeDistance) > 50) {
       if (swipeDistance > 0) {
-        navigateImage("prev"); // Swipe right → previous image
+        navigateImage("prev");
       } else {
-        navigateImage("next"); // Swipe left → next image
+        navigateImage("next");
       }
     }
   };
@@ -618,6 +629,7 @@ export default function ProductDetails() {
     if (e.key === "ArrowRight") navigateImage("next");
     if (e.key === "Escape") setIsModalOpen(false);
   };
+
   const handleImageLoad = () => {
     setImageLoaded(true);
   };
@@ -749,13 +761,17 @@ export default function ProductDetails() {
           {/* Info */}
           <div className="space-y-6">
             <h1 className="text-3xl font-bold capitalize">{product.title}</h1>
-            <p className="text-2xl font-semibold text-gray-900">
-              {totalPrice === undefined || totalPrice === null ? (
-                <span className="inline-block h-6 w-50 bg-gray-200 rounded animate-pulse"></span>
-              ) : (
-                <>{formatINR(totalPrice)}</>
-              )}
-            </p>
+
+            {/* PRICE DISPLAY - MAIN */}
+            <div className="space-y-2">
+              <p className="text-2xl font-semibold text-gray-900">
+                {totalPrice === undefined || totalPrice === null ? (
+                  <span className="inline-block h-8 w-48 bg-gray-300 rounded animate-pulse"></span>
+                ) : (
+                  <>{formatINR(totalPrice)}</>
+                )}
+              </p>
+            </div>
 
             {/* Options */}
             <div className="space-y-4">
@@ -823,7 +839,8 @@ export default function ProductDetails() {
                   </select>
                 </div>
               )}
-              {/* Ring Size Dropdown (only if product is a ring) */}
+
+              {/* Ring Size Dropdown */}
               {(handle?.toLowerCase().endsWith("-ring") ||
                 handle?.toLowerCase().endsWith("-band")) && (
                 <div className="relative w-48">
@@ -845,7 +862,6 @@ export default function ProductDetails() {
                     ))}
                   </select>
 
-                  {/* Size Guide Link */}
                   <p
                     className="text-sm text-gray-600 underline cursor-pointer mt-2"
                     onClick={() => setShowSizeGuide(true)}
@@ -853,7 +869,7 @@ export default function ProductDetails() {
                     View Size Guide
                   </p>
 
-                  {/* ---------- ENGRAVING FIELD (inside the ring block) ---------- */}
+                  {/* ENGRAVING FIELD */}
                   <div className="mt-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Custom Engraving (optional)
@@ -872,9 +888,8 @@ export default function ProductDetails() {
                   </div>
                 </div>
               )}
-              {/* Engraving Option – only for rings */}
 
-              {/* Bracelet Size Dropdown (only if product is a bracelet) */}
+              {/* Bracelet Size Dropdown */}
               {handle?.toLowerCase().endsWith("-bracelet") && (
                 <div className="relative w-48">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -905,7 +920,6 @@ export default function ProductDetails() {
                     ))}
                   </select>
 
-                  {/* Bracelet Size Guide Link */}
                   <p
                     className="text-sm text-gray-600 underline cursor-pointer mt-2"
                     onClick={() => setShowSizeGuide(true)}
@@ -917,7 +931,7 @@ export default function ProductDetails() {
             </div>
 
             {/* Quantity */}
-            <div className="flex items-center gap-3 mt-4 ">
+            <div className="flex items-center gap-3 mt-4">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 className="w-10 cursor-pointer h-10 border rounded-lg flex items-center justify-center hover:bg-gray-50"
@@ -1045,6 +1059,7 @@ export default function ProductDetails() {
                 )}
               </div>
             </div>
+
             {/* Product Assurance Icons */}
             <div className="mt-6 flex flex-wrap gap-4 text-sm text-gray-700">
               <div className="flex items-center gap-2 flex-1 min-w-[200px]">
@@ -1075,7 +1090,7 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs / Accordion with Price Breakdown */}
         <ProductAccordion
           product={product}
           selectedOptions={selectedOptions}
@@ -1092,7 +1107,6 @@ export default function ProductDetails() {
           onKeyDown={handleKeyDown}
           tabIndex={0}
           onClick={(e) => {
-            // Close if clicked outside the image
             if (e.target === e.currentTarget) setIsModalOpen(false);
           }}
           onTouchStart={(e) => (touchStartX = e.touches[0].clientX)}
@@ -1105,7 +1119,6 @@ export default function ProductDetails() {
             }
           }}
         >
-          {/* Close Button */}
           <button
             onClick={() => setIsModalOpen(false)}
             className="absolute top-4 right-4 text-black hover:text-gray-300 transition-colors z-10"
@@ -1114,7 +1127,6 @@ export default function ProductDetails() {
             <X size={32} />
           </button>
 
-          {/* Prev Button */}
           {allImages.length > 1 && (
             <button
               onClick={(e) => {
@@ -1128,7 +1140,6 @@ export default function ProductDetails() {
             </button>
           )}
 
-          {/* Image */}
           <img
             src={
               selectedImage ||
@@ -1139,7 +1150,6 @@ export default function ProductDetails() {
             className="h-[90vh] max-w-[90vw] object-contain p-4 rounded-lg"
           />
 
-          {/* Next Button */}
           {allImages.length > 1 && (
             <button
               onClick={(e) => {
@@ -1153,7 +1163,6 @@ export default function ProductDetails() {
             </button>
           )}
 
-          {/* Image Counter */}
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black/50 px-4 py-2 rounded-full text-sm">
             {currentImageIndex + 1} / {allImages.length}
           </div>
@@ -1171,7 +1180,6 @@ export default function ProductDetails() {
               <X size={24} />
             </button>
 
-            {/* If product is ring → show ring instructions */}
             {handle?.toLowerCase().endsWith("-ring") ||
             handle?.toLowerCase().endsWith("-band") ? (
               <>
@@ -1184,7 +1192,7 @@ export default function ProductDetails() {
                     your finger.
                   </li>
                   <li>
-                    Make sure it’s snug but not tight, then mark the spot where
+                    Make sure it's snug but not tight, then mark the spot where
                     it overlaps.
                   </li>
                   <li>
@@ -1236,7 +1244,6 @@ export default function ProductDetails() {
                 </table>
               </>
             ) : (
-              // Bracelet size guide → show image
               <>
                 <h2 className="text-2xl font-semibold mb-4 text-center">
                   Bracelet Size Guide

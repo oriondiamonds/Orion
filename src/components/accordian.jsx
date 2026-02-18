@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, CircleCheckBig } from "lucide-react";
 import PriceBreakup from "./PriceBreakup";
 /* ---------- DIAMOND DETAILS ---------- */
-/* ---------- DIAMOND DETAILS ---------- */
+
 function DiamondDetails({ descriptionHtml }) {
   const [diamondData, setDiamondData] = useState([]);
 
@@ -151,9 +151,10 @@ function ProductSpecs({
     const karatNum = parseInt(selectedKarat);
 
     // ✅ Prefer synced weight from product_prices, fallback to description HTML
-    const syncedWeight = pricing && pricing[`weight_${karatNum}k`]
-      ? `${pricing[`weight_${karatNum}k`]}g`
-      : null;
+    const syncedWeight =
+      pricing && pricing[`weight_${karatNum}k`]
+        ? `${pricing[`weight_${karatNum}k`]}g`
+        : null;
 
     if (syncedWeight) {
       setGoldWeight(syncedWeight);
