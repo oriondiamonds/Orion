@@ -367,12 +367,37 @@ export default function ProductDetails() {
             productData?.featuredImage?.url,
         );
 
-        const defaultVariant =
-          productData.variants.edges.find(({ node }) =>
+        // If karat is specified via URL, find a variant matching both White Gold + that karat
+        let defaultVariant;
+        if (karatFromUrl) {
+          defaultVariant = productData.variants.edges.find(({ node }) =>
             node.selectedOptions.some(
               (opt) => opt.name === "Gold Color" && opt.value === "White Gold",
+            ) &&
+            node.selectedOptions.some(
+              (opt) => opt.name === "Gold Karat" && opt.value === karatFromUrl,
             ),
-          )?.node || productData.variants.edges[0]?.node;
+          )?.node;
+        }
+
+        // Fallback: 
+        if (!defaultVariant) {
+          defaultVariant =
+            productData.variants.edges.find(({ node }) =>
+              node.selectedOptions.some(
+                (opt) => opt.name === "Gold Color" && opt.value === "White Gold",
+              ) &&
+              node.selectedOptions.some(
+                (opt) => opt.name === "Gold Karat" && opt.value === "10K",
+              ),
+            )?.node ||
+            productData.variants.edges.find(({ node }) =>
+              node.selectedOptions.some(
+                (opt) => opt.name === "Gold Color" && opt.value === "White Gold",
+              ),
+            )?.node ||
+            productData.variants.edges[0]?.node;
+        }
 
         if (defaultVariant) {
           const initialOptions = {};
@@ -380,19 +405,7 @@ export default function ProductDetails() {
             initialOptions[option.name] = option.value;
           });
 
-          if (karatFromUrl && initialOptions["Gold Karat"]) {
-            initialOptions["Gold Karat"] = karatFromUrl;
-            const matchingVariant = productData.variants.edges.find(
-              ({ node }) =>
-                node.selectedOptions.every(
-                  (opt) => initialOptions[opt.name] === opt.value,
-                ),
-            )?.node;
-            setSelectedVariant(matchingVariant || defaultVariant);
-          } else {
-            setSelectedVariant(defaultVariant);
-          }
-
+          setSelectedVariant(defaultVariant);
           setSelectedOptions(initialOptions);
         }
       }

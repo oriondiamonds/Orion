@@ -141,10 +141,9 @@ export default function CollectionSection({ id, title, items = [] }) {
     karatFilter !== "all";
 
   const getProductUrl = (handle) => {
-    if (karatFilter !== "all") {
-      return `/product/${handle}?karat=${karatFilter}`;
-    }
-    return `/product/${handle}`;
+    // Always pass karat so product detail page shows matching price
+    const karat = karatFilter !== "all" ? karatFilter : "10K";
+    return `/product/${handle}?karat=${karat}`;
   };
 
   return (
