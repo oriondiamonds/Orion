@@ -12,6 +12,14 @@ const UTM_PARAMS = [
 const UTM_COOKIE_NAME = "orion_utm";
 const UTM_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
+// Search engines whose referrals should NOT be attributed as "referral" UTM
+// (they are organic traffic, not paid/referral campaigns)
+const SEARCH_ENGINE_DOMAINS = [
+  "google.com", "google.co.in", "google.co.uk",
+  "bing.com", "yahoo.com", "duckduckgo.com",
+  "baidu.com", "yandex.com", "yandex.ru",
+];
+
 export function middleware(request) {
   const { searchParams, pathname } = request.nextUrl;
   const response = NextResponse.next();
@@ -85,9 +93,39 @@ export function middleware(request) {
     hasUtm = true; // Treat coupon as trackable parameter
   }
 
-  // If UTM params or coupon found, set/overwrite the cookie (last-touch attribution)
+  // Referrer-based fallback attribution (for ad partners that strip UTM params in their redirects)
+  // e.g. BuyHatke price comparison site sends users without preserving UTM params
+  if (!hasUtm && !pathname.startsWith("/api/")) {
+    const referer = request.headers.get("referer") || "";
+    if (referer) {
+      try {
+        const refUrl = new URL(referer);
+        const refHost = refUrl.hostname.replace(/^www\./, "");
+
+        const isSelfReferral =
+          refHost.includes("oriondiamonds.in") || refHost === "localhost";
+        const isSearchEngine = SEARCH_ENGINE_DOMAINS.some(
+          (se) => refHost === se || refHost.endsWith("." + se)
+        );
+
+        if (!isSelfReferral && !isSearchEngine) {
+          // External referral — attribute as referral traffic
+          utmData.utm_source = refHost;
+          utmData.utm_medium = "referral";
+          utmData.landing_url = pathname + request.nextUrl.search;
+          hasUtm = true;
+        }
+      } catch {
+        // Invalid referer URL — skip
+      }
+    }
+  }
+
+  // If UTM params, coupon, or external referral found — set cookies and bypass CDN cache
   if (hasUtm) {
-    utmData.landing_url = request.nextUrl.pathname + request.nextUrl.search;
+    if (!utmData.landing_url) {
+      utmData.landing_url = pathname + request.nextUrl.search;
+    }
 
     response.cookies.set(UTM_COOKIE_NAME, JSON.stringify(utmData), {
       path: "/",
@@ -105,6 +143,9 @@ export function middleware(request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
     });
+
+    // Bypass CDN cache for tracking pages — cached responses may not forward Set-Cookie headers
+    response.headers.set("Cache-Control", "no-store, private");
   }
 
   return response;
