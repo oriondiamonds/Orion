@@ -677,6 +677,8 @@ export default function ProductDetails() {
                   product.featuredImage?.url
                 }
                 alt={product.title}
+                loading="eager"
+                decoding="async"
                 onLoad={handleImageLoad}
                 className={`max-h-full max-w-full object-contain transition-all duration-500 ${
                   imageLoaded
@@ -730,6 +732,8 @@ export default function ProductDetails() {
                   <img
                     src={node.url}
                     alt={node.altText || product.title}
+                    loading="lazy"
+                    decoding="async"
                     className="w-20 h-20 object-cover rounded-md"
                     onLoad={() => {
                       setLoadedCount((prev) => {

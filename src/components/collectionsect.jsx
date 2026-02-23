@@ -285,6 +285,7 @@ export default function CollectionSection({ id, title, items = [] }) {
                   src={item.image}
                   alt={item.name}
                   fill
+                  sizes="(max-width: 768px) 50vw, 25vw"
                   priority={false}
                   className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
                 />

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../../utils/supabase-admin.js";
+import { compressToUnderOneMB } from "../../../../../utils/image-compress.js";
 
 const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "changeme123").trim();
 
@@ -43,23 +44,26 @@ export async function POST(request) {
       );
     }
 
-    // Max 5MB
-    if (file.size > 5 * 1024 * 1024) {
+    // Accept up to 20MB input — we compress before storing
+    if (file.size > 20 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "Image must be under 5MB" },
+        { error: "Image must be under 20MB" },
         { status: 400 }
       );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.name.split(".").pop() || "jpg";
+    const rawBuffer = Buffer.from(await file.arrayBuffer());
+
+    // Compress to ≤ 1MB before storing
+    const { buffer, contentType, ext } = await compressToUnderOneMB(rawBuffer);
+
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const storagePath = `products/${handle}/${filename}`;
+    const storagePath = `${handle}/${filename}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from("product-images")
       .upload(storagePath, buffer, {
-        contentType: file.type,
+        contentType,
         upsert: false,
       });
 
