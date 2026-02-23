@@ -677,6 +677,8 @@ export default function ProductDetails() {
                   product.featuredImage?.url
                 }
                 alt={product.title}
+                width={600}
+                height={600}
                 loading="eager"
                 decoding="async"
                 fetchpriority="high"
@@ -733,6 +735,8 @@ export default function ProductDetails() {
                   <img
                     src={node.url}
                     alt={node.altText || product.title}
+                    width={80}
+                    height={80}
                     loading="lazy"
                     decoding="async"
                     className="w-20 h-20 object-cover rounded-md"
@@ -763,6 +767,8 @@ export default function ProductDetails() {
                 <img
                   src="/dct.jpg"
                   alt="DCT"
+                  width={80}
+                  height={80}
                   className="w-20 h-20 object-cover rounded-md"
                   onLoad={() => {
                     setLoadedCount((prev) => {
