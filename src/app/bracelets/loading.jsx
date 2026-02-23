@@ -33,7 +33,7 @@ export default function Loading() {
         ></div>
       </div>
       <p className="text-gray-600 mt-3 text-sm font-medium">
-        Loading products...
+        Loading products..
       </p>
     </div>
   );
