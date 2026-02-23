@@ -2,21 +2,23 @@
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { parseUtmFromCookieString } from "../utils/utm.js";
 
 /**
- * Captures coupon codes from URL parameters and stores them for auto-apply in cart.
- * Supports: ?coupon=CODE, ?coupon_code=CODE, ?utm_coupon=CODE
+ * Captures coupon codes and stores them in localStorage for cart auto-apply.
  *
- * Example marketing links:
- * - https://oriondiamonds.com/?coupon=SUMMER20
- * - https://oriondiamonds.com/products/ring?coupon_code=AGENCY10
- * - https://oriondiamonds.com/?utm_coupon=WELCOME15&utm_source=facebook
+ * Source 1 — URL params (direct links):
+ *   ?coupon=CODE, ?coupon_code=CODE, ?utm_coupon=CODE
+ *
+ * Source 2 — orion_utm cookie (set by /api/click server redirect):
+ *   When BuyHatke strips UTM params, /api/click sets the cookie before redirecting.
+ *   The destination URL has no params, so we read the coupon from the cookie instead.
  */
 export default function CouponCapture() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check for coupon in URL params (multiple possible param names)
+    // --- Source 1: URL params ---
     const couponFromUrl =
       searchParams.get("coupon") ||
       searchParams.get("coupon_code") ||
@@ -24,14 +26,20 @@ export default function CouponCapture() {
 
     if (couponFromUrl) {
       const normalizedCoupon = couponFromUrl.trim().toUpperCase();
-
-      // Store in localStorage for cart to pick up
       localStorage.setItem("referral_coupon", normalizedCoupon);
-
-      // Store timestamp for expiry (24 hours)
       localStorage.setItem("referral_coupon_time", Date.now().toString());
+      return; // URL param takes priority — no need to check cookie
+    }
 
-      console.log("📎 Captured referral coupon:", normalizedCoupon);
+    // --- Source 2: orion_utm cookie (set by /api/click redirect) ---
+    // Only bridge to localStorage if no referral coupon is already stored
+    const existingCoupon = localStorage.getItem("referral_coupon");
+    if (existingCoupon) return;
+
+    const utmData = parseUtmFromCookieString(document.cookie);
+    if (utmData?.coupon_code) {
+      localStorage.setItem("referral_coupon", utmData.coupon_code);
+      localStorage.setItem("referral_coupon_time", Date.now().toString());
     }
   }, [searchParams]);
 

@@ -99,50 +99,46 @@ export async function POST(request) {
       throw updateError;
     }
 
-    // Record coupon usage if coupon was applied
+    // Run coupon recording + cart clearing in parallel (both non-critical)
+    const postPaymentTasks = [];
+
     if (order.coupon_code) {
-      try {
-        const { data: coupon } = await supabaseAdmin
+      postPaymentTasks.push(
+        supabaseAdmin
           .from("coupons")
           .select("id")
           .eq("code", order.coupon_code)
-          .single();
-
-        if (coupon) {
-          await supabaseAdmin.from("coupon_usages").insert({
-            coupon_id: coupon.id,
-            customer_email: order.customer_email,
-            order_id: order.id,
-            discount_applied: order.discount_amount || 0,
-          });
-        }
-      } catch (couponErr) {
-        console.error("Failed to record coupon usage:", couponErr);
-        // Don't fail the payment verification for this
-      }
+          .single()
+          .then(({ data: coupon }) => {
+            if (coupon) {
+              return supabaseAdmin.from("coupon_usages").insert({
+                coupon_id: coupon.id,
+                customer_email: order.customer_email,
+                order_id: order.id,
+                discount_applied: order.discount_amount || 0,
+              });
+            }
+          })
+          .catch((err) => console.error("Failed to record coupon usage:", err))
+      );
     }
 
-    // Send Telegram notification to admin
-    try {
-      const message = formatOrderMessage(order);
-      const telegramResult = await sendTelegramNotification(message);
-
-      if (!telegramResult.success) {
-        console.error("Telegram notification failed:", telegramResult.error);
-        // Don't fail the payment, just log
-      }
-    } catch (notifErr) {
-      console.error("Telegram notification error:", notifErr);
-      // Don't fail the payment verification for notification errors
-    }
-
-    // Clear server cart (only for cart flow, not buy-now)
     if (customerEmail && source !== "buynow") {
-      await supabaseAdmin
-        .from("carts")
-        .delete()
-        .eq("email", customerEmail.toLowerCase().trim());
+      postPaymentTasks.push(
+        supabaseAdmin
+          .from("carts")
+          .delete()
+          .eq("email", customerEmail.toLowerCase().trim())
+          .catch((err) => console.error("Failed to clear server cart:", err))
+      );
     }
+
+    await Promise.all(postPaymentTasks);
+
+    // Telegram notification — fire-and-forget, never blocks the response
+    sendTelegramNotification(formatOrderMessage(order)).catch((err) =>
+      console.error("Telegram notification error:", err)
+    );
 
     return NextResponse.json({
       success: true,

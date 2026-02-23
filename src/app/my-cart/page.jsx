@@ -20,6 +20,7 @@ export default function CartPage() {
   const { data: session } = useSession();
 
   const [cartItems, setCartItems] = useState([]);
+  const [cartInitialized, setCartInitialized] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [customerEmail, setCustomerEmail] = useState(null);
@@ -67,6 +68,7 @@ export default function CartPage() {
       );
 
       setCartItems(enrichedItems);
+      setCartInitialized(true);
     };
 
     loadCart();
@@ -334,6 +336,39 @@ export default function CartPage() {
     }
     router.push("/checkout?source=cart");
   };
+
+  // Show skeleton while cart is being read from localStorage
+  if (!cartInitialized) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-25 mt-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="h-9 w-48 bg-gray-200 rounded-lg mb-8 animate-pulse" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white rounded-xl shadow-md p-6 flex gap-4 animate-pulse">
+                  <div className="w-24 h-24 bg-gray-200 rounded-md shrink-0" />
+                  <div className="flex-1 space-y-3">
+                    <div className="h-5 bg-gray-200 rounded w-3/4" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2" />
+                    <div className="h-5 bg-gray-200 rounded w-1/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-md p-6 animate-pulse space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-1/2" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-10 bg-gray-200 rounded-full mt-6" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (

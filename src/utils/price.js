@@ -1,5 +1,9 @@
 // src/utils/price.js
 
+// Set DEBUG_PRICING=true in .env.local to enable verbose price calculation logs
+const DEBUG = process.env.DEBUG_PRICING === "true";
+const log = (...args) => DEBUG && console.log(...args);
+
 // Cache for pricing config
 let cachedConfig = null;
 let lastConfigFetch = 0;
@@ -16,32 +20,32 @@ async function getPricingConfig() {
 
   // Return cached config if still valid
   if (cachedConfig && now - lastConfigFetch < CONFIG_CACHE_DURATION) {
-    console.log("📦 [PRICING CONFIG] Using CACHED config");
-    console.log(
+    log("📦 [PRICING CONFIG] Using CACHED config");
+    log(
       "⏱️  Cache age:",
       Math.round((now - lastConfigFetch) / 1000),
       "seconds",
     );
-    console.log(
+    log(
       "💾 Cached Config Details:",
       JSON.stringify(cachedConfig, null, 2),
     );
     return cachedConfig;
   }
 
-  console.log("🔄 [PRICING CONFIG] Fetching FRESH config from API...");
+  log("🔄 [PRICING CONFIG] Fetching FRESH config from API...");
 
   try {
     // Use internal API route
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const apiUrl = `${baseUrl}/api/pricing-config`;
-    console.log("🌐 API URL:", apiUrl);
+    log("🌐 API URL:", apiUrl);
 
     const response = await fetch(apiUrl, {
       cache: "no-store",
     });
 
-    console.log(
+    log(
       "📡 API Response Status:",
       response.status,
       response.statusText,
@@ -54,16 +58,16 @@ async function getPricingConfig() {
     cachedConfig = await response.json();
     lastConfigFetch = now;
 
-    console.log("✅ [PRICING CONFIG] Fresh config loaded successfully");
-    console.log(
+    log("✅ [PRICING CONFIG] Fresh config loaded successfully");
+    log(
       "📊 Diamond Margins from API:",
       JSON.stringify(cachedConfig.diamondMargins, null, 2),
     );
-    console.log(
+    log(
       "📊 Making Charges from API:",
       JSON.stringify(cachedConfig.makingCharges, null, 2),
     );
-    console.log("📊 GST Rate from API:", cachedConfig.gstRate);
+    log("📊 GST Rate from API:", cachedConfig.gstRate);
 
     return cachedConfig;
   } catch (error) {
@@ -89,11 +93,11 @@ async function getPricingConfig() {
       gstRate: 0.03,
     };
 
-    console.log(
+    log(
       "📊 Fallback Diamond Margins:",
       JSON.stringify(fallbackConfig.diamondMargins, null, 2),
     );
-    console.log(
+    log(
       "📊 Fallback Making Charges:",
       JSON.stringify(fallbackConfig.makingCharges, null, 2),
     );
@@ -108,12 +112,12 @@ async function getGoldPrice() {
 
   // Return cached price if still valid
   if (cachedGoldPrice && now - lastGoldFetch < GOLD_CACHE_DURATION) {
-    console.log(
+    log(
       "💰 [GOLD PRICE] Using CACHED price:",
       cachedGoldPrice,
       "₹/gram",
     );
-    console.log(
+    log(
       "⏱️  Cache age:",
       Math.round((now - lastGoldFetch) / 1000),
       "seconds",
@@ -121,19 +125,19 @@ async function getGoldPrice() {
     return cachedGoldPrice;
   }
 
-  console.log("🔄 [GOLD PRICE] Fetching FRESH gold price from API...");
+  log("🔄 [GOLD PRICE] Fetching FRESH gold price from API...");
 
   try {
     // Use internal API route
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const apiUrl = `${baseUrl}/api/gold-price`;
-    console.log("🌐 Gold Price API URL:", apiUrl);
+    log("🌐 Gold Price API URL:", apiUrl);
 
     const response = await fetch(apiUrl, {
       cache: "no-store",
     });
 
-    console.log(
+    log(
       "📡 Gold Price API Response Status:",
       response.status,
       response.statusText,
@@ -144,7 +148,7 @@ async function getGoldPrice() {
     }
 
     const data = await response.json();
-    console.log("📦 Raw API response:", data);
+    log("📦 Raw API response:", data);
 
     if (!data.success || !data.price) {
       throw new Error("Invalid gold price response");
@@ -153,7 +157,7 @@ async function getGoldPrice() {
     cachedGoldPrice = parseFloat(data.price);
     lastGoldFetch = now;
 
-    console.log(
+    log(
       "✅ [GOLD PRICE] Fresh price loaded:",
       cachedGoldPrice,
       "₹/gram",
@@ -172,13 +176,13 @@ async function getGoldPrice() {
 function findRate(weight, ranges) {
   for (const [min, max, rate] of ranges) {
     if (weight >= min && weight <= max) {
-      console.log(
+      log(
         `  💎 Weight ${weight}ct found in range [${min}-${max}] → Rate: ₹${rate}`,
       );
       return rate;
     }
   }
-  console.log(`  ❌ Weight ${weight}ct NOT FOUND in any range → Rate: 0`);
+  log(`  ❌ Weight ${weight}ct NOT FOUND in any range → Rate: 0`);
   return 0;
 }
 
@@ -219,8 +223,8 @@ function getDiamondTier(weight, diamondMargins) {
     tier = diamondMargins.greaterThan5ct || diamondMargins.greaterThan1ct;
   }
 
-  console.log(`  🎯 Tier Selection for ${weight}ct: ${tierKey}`);
-  console.log(
+  log(`  🎯 Tier Selection for ${weight}ct: ${tierKey}`);
+  log(
     `     Multiplier: ${tier.multiplier}, Flat Addition: ${tier.flatAddition || 0}`,
   );
 
@@ -233,33 +237,33 @@ export async function calculateFinalPrice({
   goldWeight = 0,
   goldKarat = "18K",
 }) {
-  console.log("\n" + "=".repeat(80));
-  console.log("🚀 [PRICE CALCULATION] Starting calculation...");
-  console.log("=".repeat(80));
+  log("\n" + "=".repeat(80));
+  log("🚀 [PRICE CALCULATION] Starting calculation...");
+  log("=".repeat(80));
 
   // Fetch current pricing configuration
   const config = await getPricingConfig();
 
-  console.log("\n📋 [INPUT DATA]");
-  console.log("Diamonds:", JSON.stringify(diamonds, null, 2));
-  console.log("Gold Weight:", goldWeight, "g");
-  console.log("Gold Karat:", goldKarat);
+  log("\n📋 [INPUT DATA]");
+  log("Diamonds:", JSON.stringify(diamonds, null, 2));
+  log("Gold Weight:", goldWeight, "g");
+  log("Gold Karat:", goldKarat);
 
   let totalDiamondPrice = 0;
 
-  console.log("\n💎 [DIAMOND PRICING BREAKDOWN]");
+  log("\n💎 [DIAMOND PRICING BREAKDOWN]");
 
   for (const d of diamonds) {
     const shape = (d.shape || "").toLowerCase();
     const weight = parseFloat(d.weight) || 0;
     const count = parseInt(d.count) || 0;
 
-    console.log(
+    log(
       `\n  📍 Diamond: Shape=${shape}, Weight=${weight}ct, Count=${count}`,
     );
 
     if (weight <= 0 || count <= 0) {
-      console.log(`     ⏭️  Skipped (invalid weight or count)`);
+      log(`     ⏭️  Skipped (invalid weight or count)`);
       continue;
     }
 
@@ -267,7 +271,7 @@ export async function calculateFinalPrice({
     let rate = 0;
 
     // === Per-stone base rate lookup ===
-    console.log(`  🔍 Looking up base rate for ${shape} shape...`);
+    log(`  🔍 Looking up base rate for ${shape} shape...`);
 
     if (roundShapes.includes(shape)) {
       if (weight < 1) {
@@ -313,7 +317,7 @@ export async function calculateFinalPrice({
 
     // === Base price ===
     const base = weight * count * rate;
-    console.log(
+    log(
       `     Base Calculation: ${weight} × ${count} × ${rate} = ₹${base}`,
     );
 
@@ -321,7 +325,7 @@ export async function calculateFinalPrice({
     const tier = getDiamondTier(weight, config.diamondMargins);
     const adjusted = base * tier.multiplier + (tier.flatAddition || 0);
 
-    console.log(
+    log(
       `     ✏️  After Margin: (${base} × ${tier.multiplier}) + ${tier.flatAddition || 0} = ₹${adjusted}`,
     );
 
@@ -332,19 +336,19 @@ export async function calculateFinalPrice({
   const fee1 = config.diamondMargins.baseFees.fee1;
   const fee2 = config.diamondMargins.baseFees.fee2;
 
-  console.log(
+  log(
     `\n  💸 Base Fees: Fee1=${fee1} + Fee2=${fee2} = ₹${fee1 + fee2}`,
   );
 
   totalDiamondPrice += fee1 + fee2;
 
-  console.log(`  📊 Total Diamond Price (with fees): ₹${totalDiamondPrice}`);
+  log(`  📊 Total Diamond Price (with fees): ₹${totalDiamondPrice}`);
 
   // === Get gold price from internal API ===
-  console.log("\n⭐ [GOLD PRICING]");
+  log("\n⭐ [GOLD PRICING]");
 
   const gold24Price = await getGoldPrice();
-  console.log(`  24K Gold Price: ₹${gold24Price}/gram`);
+  log(`  24K Gold Price: ₹${gold24Price}/gram`);
 
   const goldRates = {
     "10K": gold24Price * (10 / 24),
@@ -352,64 +356,64 @@ export async function calculateFinalPrice({
     "18K": gold24Price * (18 / 24),
   };
 
-  console.log(`  Karat Conversion Rates:`);
-  console.log(`    10K: ₹${goldRates["10K"].toFixed(2)}/gram`);
-  console.log(`    14K: ₹${goldRates["14K"].toFixed(2)}/gram`);
-  console.log(`    18K: ₹${goldRates["18K"].toFixed(2)}/gram`);
+  log(`  Karat Conversion Rates:`);
+  log(`    10K: ₹${goldRates["10K"].toFixed(2)}/gram`);
+  log(`    14K: ₹${goldRates["14K"].toFixed(2)}/gram`);
+  log(`    18K: ₹${goldRates["18K"].toFixed(2)}/gram`);
 
   const selectedGoldRate = goldRates[goldKarat] || goldRates["18K"] || 0;
-  console.log(
+  log(
     `  Selected Rate (${goldKarat}): ₹${selectedGoldRate.toFixed(2)}/gram`,
   );
 
   const goldPrice = selectedGoldRate * goldWeight;
-  console.log(
+  log(
     `  Gold Price Calculation: ${selectedGoldRate.toFixed(2)} × ${goldWeight} = ₹${goldPrice.toFixed(2)}`,
   );
 
   // === Making charges (using config) ===
-  console.log("\n🔨 [MAKING CHARGES]");
+  log("\n🔨 [MAKING CHARGES]");
 
   const ratePerGram =
     goldWeight >= 2
       ? config.makingCharges.greaterThan2g.ratePerGram
       : config.makingCharges.lessThan2g.ratePerGram;
 
-  console.log(`  Gold Weight: ${goldWeight}g`);
-  console.log(
+  log(`  Gold Weight: ${goldWeight}g`);
+  log(
     `  Rate Per Gram (${goldWeight >= 2 ? ">= 2g" : "< 2g"}): ₹${ratePerGram}/gram`,
   );
-  console.log(`  Multiplier: ${config.makingCharges.multiplier}`);
+  log(`  Multiplier: ${config.makingCharges.multiplier}`);
 
   let makingCharge = goldWeight * ratePerGram;
-  console.log(
+  log(
     `  Before Multiplier: ${goldWeight} × ${ratePerGram} = ₹${makingCharge}`,
   );
 
   makingCharge *= config.makingCharges.multiplier;
-  console.log(
+  log(
     `  After Multiplier: ${makingCharge / config.makingCharges.multiplier} × ${config.makingCharges.multiplier} = ₹${makingCharge}`,
   );
 
   // === Subtotal, GST, and Total ===
-  console.log("\n💰 [FINAL CALCULATION]");
+  log("\n💰 [FINAL CALCULATION]");
 
   const subtotal = Math.round(totalDiamondPrice + goldPrice + makingCharge);
-  console.log(
+  log(
     `  Subtotal: ₹${Math.round(totalDiamondPrice)} + ₹${Math.round(goldPrice)} + ₹${Math.round(makingCharge)} = ₹${subtotal}`,
   );
 
   const gst = Math.round(subtotal * config.gstRate);
-  console.log(
+  log(
     `  GST (${(config.gstRate * 100).toFixed(1)}%): ₹${subtotal} × ${config.gstRate} = ₹${gst}`,
   );
 
   const grandTotal = Math.round(subtotal + gst);
-  console.log(`  Grand Total: ₹${subtotal} + ₹${gst} = ₹${grandTotal}`);
+  log(`  Grand Total: ₹${subtotal} + ₹${gst} = ₹${grandTotal}`);
 
-  console.log("\n" + "=".repeat(80));
-  console.log("📤 [FINAL OUTPUT]");
-  console.log("=".repeat(80));
+  log("\n" + "=".repeat(80));
+  log("📤 [FINAL OUTPUT]");
+  log("=".repeat(80));
 
   const result = {
     diamondPrice: Math.round(totalDiamondPrice),
@@ -420,29 +424,29 @@ export async function calculateFinalPrice({
     totalPrice: Math.round(grandTotal),
   };
 
-  console.log(JSON.stringify(result, null, 2));
-  console.log("=".repeat(80) + "\n");
+  log(JSON.stringify(result, null, 2));
+  log("=".repeat(80) + "\n");
 
   return result;
 }
 
 // Clear the config cache (useful for admin updates)
 export function clearPricingCache() {
-  console.log("🗑️  [CACHE] Clearing pricing config cache");
+  log("🗑️  [CACHE] Clearing pricing config cache");
   cachedConfig = null;
   lastConfigFetch = 0;
 }
 
 // Clear the gold price cache
 export function clearGoldPriceCache() {
-  console.log("🗑️  [CACHE] Clearing gold price cache");
+  log("🗑️  [CACHE] Clearing gold price cache");
   cachedGoldPrice = null;
   lastGoldFetch = 0;
 }
 
 // Clear all caches
 export function clearAllCaches() {
-  console.log("🗑️  [CACHE] Clearing ALL caches");
+  log("🗑️  [CACHE] Clearing ALL caches");
   clearPricingCache();
   clearGoldPriceCache();
 }

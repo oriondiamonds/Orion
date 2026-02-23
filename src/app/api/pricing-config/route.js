@@ -100,20 +100,23 @@ export async function GET() {
       .limit(1)
       .single();
 
+    const CACHE_HEADERS = {
+      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+    };
+
     if (error && error.code === "PGRST116") {
       // No config row exists — return defaults
-      return NextResponse.json({
-        ...DEFAULT_CONFIG,
-        lastUpdated: new Date().toISOString(),
-        updatedBy: "system",
-      });
+      return NextResponse.json(
+        { ...DEFAULT_CONFIG, lastUpdated: new Date().toISOString(), updatedBy: "system" },
+        { headers: CACHE_HEADERS }
+      );
     }
 
     if (error) throw error;
 
     // Migrate and return — ensures new tiers exist even for old DB rows
     const shaped = toResponseShape(data);
-    return NextResponse.json(migrateConfig(shaped));
+    return NextResponse.json(migrateConfig(shaped), { headers: CACHE_HEADERS });
   } catch (error) {
     console.error("Error loading config:", error);
     return NextResponse.json(

@@ -82,33 +82,34 @@ export function transformCollectionData(collection) {
 
 // Fetch a product by handle with all related data
 export async function fetchProductByHandle(handle) {
-  const { data: product, error } = await supabase
-    .from("products")
-    .select(
-      `
-      *,
-      images:product_images(*),
-      options:product_options(*),
-      variants:product_variants(
+  // Run product and pricing queries in parallel — saves one full DB round-trip
+  const [{ data: product, error }, { data: pricing }] = await Promise.all([
+    supabase
+      .from("products")
+      .select(
+        `
         *,
-        selected_options:variant_selected_options(*)
+        images:product_images(*),
+        options:product_options(*),
+        variants:product_variants(
+          *,
+          selected_options:variant_selected_options(*)
+        )
+      `
       )
-    `
-    )
-    .eq("handle", handle)
-    .single();
+      .eq("handle", handle)
+      .single(),
+    supabase
+      .from("product_prices")
+      .select("*")
+      .eq("handle", handle)
+      .maybeSingle(),
+  ]);
 
   if (error) {
     console.error(`Error fetching product "${handle}":`, error.message);
     return null;
   }
-
-  // Fetch synced pricing data from product_prices table
-  const { data: pricing } = await supabase
-    .from("product_prices")
-    .select("*")
-    .eq("handle", handle)
-    .maybeSingle();
 
   if (product) product.pricing = pricing;
 
