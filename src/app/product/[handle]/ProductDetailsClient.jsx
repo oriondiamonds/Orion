@@ -586,7 +586,41 @@ export default function ProductDetails() {
     }
   };
 
-  if (loading) return <p className="text-center mt-10">Loading...</p>;
+  if (loading) return (
+    <div className="pt-40 max-w-6xl mx-auto px-4 animate-pulse">
+      <div className="grid md:grid-cols-2 gap-8">
+        {/* Image skeleton */}
+        <div className="flex flex-col gap-4">
+          <div className="bg-gray-200 rounded-lg aspect-square max-h-[60vh]" />
+          <div className="flex gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="w-20 h-20 bg-gray-200 rounded-lg shrink-0" />
+            ))}
+          </div>
+        </div>
+        {/* Info skeleton */}
+        <div className="space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-3/4" />
+          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-1/4" />
+            <div className="flex gap-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="w-10 h-10 bg-gray-200 rounded-full" />
+              ))}
+            </div>
+          </div>
+          <div className="h-10 bg-gray-200 rounded w-48" />
+          <div className="flex gap-3">
+            <div className="flex-1 h-12 bg-gray-200 rounded-full" />
+            <div className="flex-1 h-12 bg-gray-200 rounded-full" />
+            <div className="w-12 h-12 bg-gray-200 rounded-full" />
+            <div className="w-12 h-12 bg-gray-200 rounded-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
   if (error) return <p className="text-center mt-10 text-red-600">{error}</p>;
   if (!product) return <p className="text-center mt-10">Product not found</p>;
 
