@@ -88,8 +88,8 @@ export default function Landing() {
   };
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const mobileImages = ["/newhero.jpg", "/hero2.png"];
-  const desktopImages = ["/newhero.jpg", "/hero3.png"];
+  const mobileImages = ["/newhero.jpg", "/hero2.jpg"];
+  const desktopImages = ["/newhero.jpg", "/hero3.jpg"];
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -112,7 +112,7 @@ export default function Landing() {
           {currentIndex === 1 ? (
             <>
               <img
-                src="/mobcust.png"
+                src="/mobcust.jpg"
                 className="absolute inset-0 w-full h-full object-cover"
               />
 
@@ -160,7 +160,7 @@ export default function Landing() {
           {currentIndex === 1 ? (
             <>
               <img
-                src="/descust.png"
+                src="/descust.jpg"
                 className="absolute inset-0 w-full h-full object-cover object-center md:object-[50%_15%]"
               />
 

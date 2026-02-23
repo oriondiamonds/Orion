@@ -286,7 +286,7 @@ export default function CollectionSection({ id, title, items = [] }) {
                   alt={item.name}
                   fill
                   sizes="(max-width: 768px) 50vw, 25vw"
-                  priority={false}
+                  priority={idx === 0}
                   className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

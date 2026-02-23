@@ -1266,7 +1266,7 @@ export default function ProductDetails() {
                   Bracelet Size Guide
                 </h2>
                 <img
-                  src="/bt_size_guide.png"
+                  src="/bt_size_guide.jpg"
                   alt="Bracelet Size Guide"
                   className="rounded-lg mx-auto max-w-full h-auto"
                 />
