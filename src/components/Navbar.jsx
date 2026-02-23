@@ -197,6 +197,8 @@ export function Navbar() {
           <img
             src="/nobglogo.png"
             alt="Logo"
+            width={400}
+            height={102}
             className="h-12 w-auto object-contain"
           />
         </div>

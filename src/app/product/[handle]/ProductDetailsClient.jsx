@@ -679,6 +679,7 @@ export default function ProductDetails() {
                 alt={product.title}
                 loading="eager"
                 decoding="async"
+                fetchpriority="high"
                 onLoad={handleImageLoad}
                 className={`max-h-full max-w-full object-contain transition-all duration-500 ${
                   imageLoaded

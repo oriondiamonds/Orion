@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { FiMenu } from "react-icons/fi";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import OurPromise from "../components/promise";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
@@ -111,9 +112,13 @@ export default function Landing() {
           {/* FULLSCREEN MODE for slide 2 (hero2.png) */}
           {currentIndex === 1 ? (
             <>
-              <img
+              <Image
                 src="/mobcust.jpg"
-                className="absolute inset-0 w-full h-full object-cover"
+                alt="Customization"
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover"
               />
 
               <div className="absolute inset-0 bg-black/40"></div>
@@ -129,9 +134,13 @@ export default function Landing() {
           ) : (
             <>
               {/* Normal mode for newhero.jpg */}
-              <img
+              <Image
                 src="/newhero.jpg"
-                className="absolute inset-0 w-full h-full object-cover"
+                alt="Orion Diamonds"
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover"
               />
 
               {/* Dark overlay */}
@@ -159,9 +168,13 @@ export default function Landing() {
           {/* If current slide is hero3 → fullscreen mode */}
           {currentIndex === 1 ? (
             <>
-              <img
+              <Image
                 src="/descust.jpg"
-                className="absolute inset-0 w-full h-full object-cover object-center md:object-[50%_15%]"
+                alt="Customization"
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover object-center md:object-[50%_15%]"
               />
 
               <div className="absolute inset-0 bg-black/40"></div>
@@ -188,10 +201,14 @@ export default function Landing() {
               </div>
 
               {/* RIGHT SIDE IMAGE */}
-              <div className="relative w-1/2 h-screen">
-                <img
+              <div className="relative w-1/2 h-screen overflow-hidden">
+                <Image
                   src="/newhero.jpg"
-                  className="w-full h-screen object-right sm:rounded-l-4xl"
+                  alt="Orion Diamonds"
+                  fill
+                  priority
+                  sizes="50vw"
+                  className="object-cover object-right sm:rounded-l-4xl"
                 />
                 <div className="absolute inset-y-0 left-0 w-32 bg-linear-to-r from-[#0a1833] to-transparent pointer-events-none"></div>
               </div>
@@ -235,10 +252,12 @@ export default function Landing() {
                 className="relative h-110 rounded-2xl overflow-hidden shadow-lg group cursor-pointer"
                 onClick={() => router.push(item.link)}
               >
-                <img
+                <Image
                   src={item.img}
                   alt={item.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
 
                 {/* Mobile title (always visible) */}
@@ -267,11 +286,13 @@ export default function Landing() {
           {/* Content layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
             {/* Left - Image */}
-            <div className="flex justify-start items-start">
-              <img
+            <div className="relative w-full rounded-xl shadow-lg overflow-hidden" style={{ aspectRatio: "1001/795" }}>
+              <Image
                 src="/aboutus.png"
                 alt="About Orion Diamonds"
-                className="rounded-xl shadow-lg w-full object-cover"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
               />
             </div>
 
@@ -540,11 +561,13 @@ export default function Landing() {
                 </div>
 
                 {/* Right Side - Image */}
-                <div className="flex justify-end items-start">
-                  <img
+                <div className="relative w-full rounded-2xl shadow-lg overflow-hidden" style={{ aspectRatio: "1/1" }}>
+                  <Image
                     src="/care.png"
                     alt="Diamond Care"
-                    className="rounded-2xl shadow-lg w-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover"
                   />
                 </div>
               </div>
@@ -687,11 +710,13 @@ export default function Landing() {
             </div>
 
             {/* Right: Image Section */}
-            <div className="w-full md:flex-1">
-              <img
+            <div className="relative w-full md:flex-1 rounded-2xl shadow-md overflow-hidden" style={{ aspectRatio: "1/1" }}>
+              <Image
                 src="/cust.png"
                 alt="Customization"
-                className="rounded-2xl shadow-md w-full object-cover"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
               />
             </div>
           </div>
