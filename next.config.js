@@ -58,6 +58,24 @@ const nextConfig = {
     ],
   },
 
+  // Preconnect to external origins used for images / APIs
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Link",
+            value: [
+              '<https://ngjrleoelyckzdtrbkqb.supabase.co>; rel="preconnect"',
+              '<https://cdn.shopify.com>; rel="preconnect"',
+            ].join(", "),
+          },
+        ],
+      },
+    ];
+  },
+
   // Build optimization
   swcMinify: true,
   experimental: {

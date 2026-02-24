@@ -40,7 +40,7 @@ export async function compressToUnderOneMB(inputBuffer) {
 
       const compressed = useWebP
         ? await pipeline.webp({ quality }).toBuffer()
-        : await pipeline.jpeg({ quality, progressive: true }).toBuffer();
+        : await pipeline.flatten({ background: "#ffffff" }).jpeg({ quality, progressive: true }).toBuffer();
 
       if (compressed.length <= MAX_SIZE_BYTES) {
         return {
@@ -55,6 +55,7 @@ export async function compressToUnderOneMB(inputBuffer) {
   // Absolute last resort
   const compressed = await sharp(inputBuffer)
     .resize({ width: 400, withoutEnlargement: true })
+    .flatten({ background: "#ffffff" })
     .jpeg({ quality: 35, progressive: true })
     .toBuffer();
 

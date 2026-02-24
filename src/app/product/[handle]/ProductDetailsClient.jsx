@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { getProductByHandle } from "../../../queries/products";
 import ProductAccordion from "../../../components/accordian";
+import RelatedProducts from "../../../components/RelatedProducts";
 import toast from "react-hot-toast";
 import { formatINR } from "../../../utils/formatIndianCurrency";
 import { useSession } from "next-auth/react";
@@ -1155,6 +1156,9 @@ export default function ProductDetails() {
           selectedVariant={selectedVariant}
           onPriceData={handlePriceData}
         />
+
+        {/* Related Products */}
+        <RelatedProducts productId={product.id} />
       </div>
 
       {/* Full Screen Modal */}

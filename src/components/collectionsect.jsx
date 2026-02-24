@@ -5,13 +5,50 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  ShoppingCart,
   SlidersHorizontal,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { formatIndianCurrency, formatINR } from "../utils/formatIndianCurrency";
+import { formatINR } from "../utils/formatIndianCurrency";
 import { useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
+import CategoryNav from "./CategoryNav";
+import { markCartLocallyModified } from "../utils/cartCleanup";
+
+// Products that require size selection — navigate to PDP instead of quick-add
+function needsSize(handle) {
+  return (
+    handle?.endsWith("-ring") ||
+    handle?.endsWith("-band") ||
+    handle?.endsWith("-bracelet")
+  );
+}
+
+// Find best default variant: White Gold + target karat, fallback gracefully
+function getDefaultVariant(item, karatFilter) {
+  const targetKarat = karatFilter !== "all" ? karatFilter : "10K";
+  const variants = item.allVariants || [];
+
+  return (
+    variants.find(
+      (v) =>
+        v.selectedOptions?.some(
+          (o) => o.name === "Gold Color" && o.value === "White Gold"
+        ) &&
+        v.selectedOptions?.some(
+          (o) => o.name === "Gold Karat" && o.value === targetKarat
+        )
+    ) ||
+    variants.find((v) =>
+      v.selectedOptions?.some(
+        (o) => o.name === "Gold Color" && o.value === "White Gold"
+      )
+    ) ||
+    variants[0]
+  );
+}
 
 export default function CollectionSection({ id, title, items = [] }) {
   const router = useRouter();
@@ -20,9 +57,26 @@ export default function CollectionSection({ id, title, items = [] }) {
   const [priceRange, setPriceRange] = useState([0, 500000]);
   const [karatFilter, setKaratFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [wishlistedHandles, setWishlistedHandles] = useState(new Set());
   const searchParams = useSearchParams();
   const initialPage = Number(searchParams.get("page")) || 1;
   const [currentPage, setCurrentPage] = useState(initialPage);
+
+  // Load wishlist state from localStorage on mount
+  useEffect(() => {
+    const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
+    const handles = new Set(wishlist.map((w) => w.handle).filter(Boolean));
+    setWishlistedHandles(handles);
+
+    const handleWishlistUpdate = () => {
+      const updated = JSON.parse(localStorage.getItem("wishlist") || "[]");
+      setWishlistedHandles(
+        new Set(updated.map((w) => w.handle).filter(Boolean))
+      );
+    };
+    window.addEventListener("wishlistUpdated", handleWishlistUpdate);
+    return () => window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
+  }, []);
 
   // Extract unique gold karat values from all product variants
   const availableKarats = (() => {
@@ -141,245 +195,371 @@ export default function CollectionSection({ id, title, items = [] }) {
     karatFilter !== "all";
 
   const getProductUrl = (handle) => {
-    // Always pass karat so product detail page shows matching price
     const karat = karatFilter !== "all" ? karatFilter : "10K";
     return `/product/${handle}?karat=${karat}`;
   };
 
+  // Quick add to cart — skips size-required products (navigates instead)
+  const handleQuickAddToCart = (e, item) => {
+    e.stopPropagation();
+
+    if (needsSize(item.handle)) {
+      router.push(getProductUrl(item.handle));
+      return;
+    }
+
+    const variant = getDefaultVariant(item, karatFilter);
+    if (!variant) {
+      router.push(getProductUrl(item.handle));
+      return;
+    }
+
+    const price = getItemPrice(item);
+    const newItem = {
+      variantId: variant.id,
+      handle: item.handle,
+      title: item.name,
+      variantTitle: variant.title || "",
+      image: item.image,
+      price: parseFloat(price),
+      calculatedPrice: parseFloat(price),
+      currencyCode: "INR",
+      quantity: 1,
+      selectedOptions: variant.selectedOptions || [],
+      priceBreakdown: null,
+    };
+
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const existingIdx = cart.findIndex((c) => c.variantId === variant.id);
+    if (existingIdx > -1) {
+      cart[existingIdx].quantity += 1;
+    } else {
+      cart.push(newItem);
+    }
+    localStorage.setItem("cart", JSON.stringify(cart));
+    markCartLocallyModified();
+    window.dispatchEvent(new Event("cartUpdated"));
+    toast.success(`${item.name} added to cart!`);
+  };
+
+  // Quick toggle wishlist
+  const handleToggleWishlist = (e, item) => {
+    e.stopPropagation();
+
+    const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
+    const isWishlisted = wishlistedHandles.has(item.handle);
+
+    if (isWishlisted) {
+      const newWishlist = wishlist.filter((w) => w.handle !== item.handle);
+      localStorage.setItem("wishlist", JSON.stringify(newWishlist));
+      setWishlistedHandles((prev) => {
+        const s = new Set(prev);
+        s.delete(item.handle);
+        return s;
+      });
+      toast.success("Removed from wishlist");
+    } else {
+      const variant = getDefaultVariant(item, karatFilter);
+      const wishlistItem = {
+        id: item.handle, // use handle as id since collection items lack UUID
+        variantId: variant?.id || null,
+        handle: item.handle,
+        title: item.name,
+        variantTitle: variant?.title || "",
+        image: item.image,
+        price: parseFloat(item.price),
+        currencyCode: "INR",
+        variant: variant?.id || null,
+        selectedOptions: (variant?.selectedOptions || []).reduce(
+          (acc, opt) => ({ ...acc, [opt.name]: opt.value }),
+          {}
+        ),
+        addedAt: new Date().toISOString(),
+      };
+      wishlist.push(wishlistItem);
+      localStorage.setItem("wishlist", JSON.stringify(wishlist));
+      setWishlistedHandles((prev) => new Set([...prev, item.handle]));
+      toast.success("Added to wishlist!");
+    }
+
+    window.dispatchEvent(new Event("wishlistUpdated"));
+  };
+
   return (
-    <section className="mt-12 mb-12 px-3 md:px-0">
-      {/* Section Title */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <h1
-          id={id}
-          className="text-4xl md:text-5xl font-bold text-[#0a1833] tracking-tight mb-4 md:mb-0"
-        >
-          {title}
-        </h1>
+    <>
+      <CategoryNav />
 
-        {/* Mobile Filter Toggle */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="md:hidden flex items-center gap-2 px-4 py-2 bg-[#0a1833] text-white rounded-lg text-sm font-medium"
-        >
-          <SlidersHorizontal size={16} />
-          Filters & Sort
-        </button>
-      </div>
-
-      {/* Filter & Sort Bar */}
-      <div
-        className={`${
-          showFilters ? "block" : "hidden"
-        } md:flex flex-col md:flex-row gap-4 md:gap-6 mb-8 p-4 md:p-6 bg-gray-50 rounded-xl transition-all duration-300`}
-      >
-        {/* Sort By */}
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-[#0a1833] mb-2">
-            Sort By
-          </label>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a1833] bg-white text-sm"
+      <section className="mt-12 mb-12 px-3 md:px-0">
+        {/* Section Title */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+          <h1
+            id={id}
+            className="text-4xl md:text-5xl font-bold text-[#0a1833] tracking-tight mb-4 md:mb-0"
           >
-            <option value="default">Default</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
-          </select>
+            {title}
+          </h1>
+
+          {/* Mobile Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="md:hidden flex items-center gap-2 px-4 py-2 bg-[#0a1833] text-white rounded-lg text-sm font-medium"
+          >
+            <SlidersHorizontal size={16} />
+            Filters & Sort
+          </button>
         </div>
 
-        {/* Gold Karat Filter */}
-        {availableKarats.length > 0 && (
+        {/* Filter & Sort Bar */}
+        <div
+          className={`${
+            showFilters ? "block" : "hidden"
+          } md:flex flex-col md:flex-row gap-4 md:gap-6 mb-8 p-4 md:p-6 bg-gray-50 rounded-xl transition-all duration-300`}
+        >
+          {/* Sort By */}
           <div className="flex-1">
             <label className="block text-sm font-medium text-[#0a1833] mb-2">
-              Gold Karat
+              Sort By
             </label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setKaratFilter("all")}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  karatFilter === "all"
-                    ? "bg-[#0a1833] text-white"
-                    : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                All
-              </button>
-              {availableKarats.map((karat) => (
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a1833] bg-white text-sm"
+            >
+              <option value="default">Default</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+            </select>
+          </div>
+
+          {/* Gold Karat Filter */}
+          {availableKarats.length > 0 && (
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-[#0a1833] mb-2">
+                Gold Karat
+              </label>
+              <div className="flex flex-wrap gap-2">
                 <button
-                  key={karat}
-                  onClick={() => setKaratFilter(karat)}
+                  onClick={() => setKaratFilter("all")}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    karatFilter === karat
+                    karatFilter === "all"
                       ? "bg-[#0a1833] text-white"
                       : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
                   }`}
                 >
-                  {karat}
+                  All
                 </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Price Range */}
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-[#0a1833] mb-2">
-            Price Range: {formatINR(priceRange[0])} -{formatINR(priceRange[1])}
-          </label>
-          <div className="flex gap-3 items-center">
-            <input
-              type="number"
-              value={priceRange[0]}
-              onChange={(e) =>
-                setPriceRange([Number(e.target.value), priceRange[1]])
-              }
-              placeholder="Min"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a1833] text-sm"
-            />
-            <span className="text-gray-500">to</span>
-            <input
-              type="number"
-              value={priceRange[1]}
-              onChange={(e) =>
-                setPriceRange([priceRange[0], Number(e.target.value)])
-              }
-              placeholder="Max"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a1833] text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Reset Filters */}
-        {isFiltered && (
-          <div className="flex items-end">
-            <button
-              onClick={handleResetFilters}
-              className="px-4 py-2.5 bg-white border border-gray-300 text-[#0a1833] rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium flex items-center gap-2"
-            >
-              <X size={16} />
-              Reset
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Results Count */}
-      <p className="text-sm text-gray-600 mb-4">
-        Showing {sortedItems.length} of {items.length} products
-      </p>
-
-      {/* Responsive Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-8 transition-all duration-500">
-        {currentItems && currentItems.length > 0 ? (
-          currentItems.map((item, idx) => (
-            <div
-              key={idx}
-              className="group relative bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2 hover:scale-[1.02] active:scale-[0.98]"
-              onClick={() => router.push(getProductUrl(item.handle))}
-            >
-              {/* Image Container */}
-              <div className="relative overflow-hidden bg-gray-50 aspect-4/5 md:aspect-square">
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 25vw"
-                  priority={idx === 0}
-                  className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                {/* View Button */}
-                <div className="absolute inset-x-0 bottom-0 p-3 md:p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                {availableKarats.map((karat) => (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(getProductUrl(item.handle));
-                    }}
-                    className="w-full bg-white text-[#0a1833] py-2 md:py-2.5 px-3 md:px-4 rounded-lg md:rounded-xl font-medium text-xs md:text-sm flex items-center justify-center gap-2 hover:bg-[#0a1833] hover:text-white transition-all duration-300 shadow-lg"
+                    key={karat}
+                    onClick={() => setKaratFilter(karat)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      karatFilter === karat
+                        ? "bg-[#0a1833] text-white"
+                        : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
+                    }`}
                   >
-                    <Eye className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                    View Details
+                    {karat}
                   </button>
-                </div>
-              </div>
-
-              {/* Product Info */}
-              <div className="p-3 md:p-5 flex flex-col justify-between min-h-[120px] md:min-h-[130px]">
-                <h3 className="font-medium capitalize text-sm md:text-lg text-[#0a1833] group-hover:text-[#1a2f5a] transition-colors duration-300 leading-snug line-clamp-2 mb-2">
-                  {item.name}
-                </h3>
-
-                {/* Price Display */}
-                <div className="mt-auto">
-                  {karatFilter !== "all" && (
-                    <p className="text-xs md:text-sm text-gray-500 mb-1">
-                      {karatFilter} Gold
-                    </p>
-                  )}
-                  <p className="text-lg md:text-xl font-bold text-[#0a1833]">
-                    {formatINR(getItemPrice(item))}
-                  </p>
-                </div>
+                ))}
               </div>
             </div>
-          ))
-        ) : (
-          <div className="col-span-full flex flex-col items-center justify-center py-16">
-            <p className="text-lg text-gray-500 font-medium">
-              No products found
-            </p>
-            <p className="text-sm text-gray-400 mt-1">
-              Try adjusting your filters
-            </p>
-            {isFiltered && (
+          )}
+
+          {/* Price Range */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-[#0a1833] mb-2">
+              Price Range: {formatINR(priceRange[0])} -{formatINR(priceRange[1])}
+            </label>
+            <div className="flex gap-3 items-center">
+              <input
+                type="number"
+                value={priceRange[0]}
+                onChange={(e) =>
+                  setPriceRange([Number(e.target.value), priceRange[1]])
+                }
+                placeholder="Min"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a1833] text-sm"
+              />
+              <span className="text-gray-500">to</span>
+              <input
+                type="number"
+                value={priceRange[1]}
+                onChange={(e) =>
+                  setPriceRange([priceRange[0], Number(e.target.value)])
+                }
+                placeholder="Max"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a1833] text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Reset Filters */}
+          {isFiltered && (
+            <div className="flex items-end">
               <button
                 onClick={handleResetFilters}
-                className="mt-4 px-6 py-2 bg-[#0a1833] text-white rounded-lg hover:bg-[#142850] transition-colors text-sm font-medium"
+                className="px-4 py-2.5 bg-white border border-gray-300 text-[#0a1833] rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium flex items-center gap-2"
               >
-                Reset Filters
+                <X size={16} />
+                Reset
               </button>
-            )}
+            </div>
+          )}
+        </div>
+
+        {/* Results Count */}
+        <p className="text-sm text-gray-600 mb-4">
+          Showing {sortedItems.length} of {items.length} products
+        </p>
+
+        {/* Responsive Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-8 transition-all duration-500">
+          {currentItems && currentItems.length > 0 ? (
+            currentItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="group relative bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2 hover:scale-[1.02] active:scale-[0.98]"
+                onClick={() => router.push(getProductUrl(item.handle))}
+              >
+                {/* Wishlist button — always visible */}
+                <button
+                  onClick={(e) => handleToggleWishlist(e, item)}
+                  className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+                  aria-label={
+                    wishlistedHandles.has(item.handle)
+                      ? "Remove from wishlist"
+                      : "Add to wishlist"
+                  }
+                >
+                  <Heart
+                    size={15}
+                    className={
+                      wishlistedHandles.has(item.handle)
+                        ? "fill-red-500 text-red-500"
+                        : "text-gray-500"
+                    }
+                  />
+                </button>
+
+                {/* Image Container */}
+                <div className="relative overflow-hidden bg-gray-50 aspect-4/5 md:aspect-square">
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    fill
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                    priority={idx === 0}
+                    className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                  {/* Hover action buttons */}
+                  <div className="absolute inset-x-0 bottom-0 p-3 md:p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(getProductUrl(item.handle));
+                      }}
+                      className="flex-1 bg-white text-[#0a1833] py-2 md:py-2.5 px-2 md:px-3 rounded-lg md:rounded-xl font-medium text-xs flex items-center justify-center gap-1.5 hover:bg-[#0a1833] hover:text-white transition-all duration-300 shadow-lg"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span className="hidden md:inline">View</span>
+                    </button>
+
+                    <button
+                      onClick={(e) => handleQuickAddToCart(e, item)}
+                      className="flex-1 bg-[#0a1833] text-white py-2 md:py-2.5 px-2 md:px-3 rounded-lg md:rounded-xl font-medium text-xs flex items-center justify-center gap-1.5 hover:bg-black transition-all duration-300 shadow-lg"
+                      title={
+                        needsSize(item.handle)
+                          ? "Select size on product page"
+                          : "Add to cart"
+                      }
+                    >
+                      <ShoppingCart className="w-3.5 h-3.5" />
+                      <span className="hidden md:inline">
+                        {needsSize(item.handle) ? "Select" : "Add"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Product Info */}
+                <div className="p-3 md:p-5 flex flex-col justify-between min-h-[120px] md:min-h-[130px]">
+                  <h3 className="font-medium capitalize text-sm md:text-lg text-[#0a1833] group-hover:text-[#1a2f5a] transition-colors duration-300 leading-snug line-clamp-2 mb-2">
+                    {item.name}
+                  </h3>
+
+                  {/* Price Display */}
+                  <div className="mt-auto">
+                    {karatFilter !== "all" && (
+                      <p className="text-xs md:text-sm text-gray-500 mb-1">
+                        {karatFilter} Gold
+                      </p>
+                    )}
+                    <p className="text-lg md:text-xl font-bold text-[#0a1833]">
+                      {formatINR(getItemPrice(item))}
+                    </p>
+                  </div>
+
+
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-16">
+              <p className="text-lg text-gray-500 font-medium">
+                No products found
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                Try adjusting your filters
+              </p>
+              {isFiltered && (
+                <button
+                  onClick={handleResetFilters}
+                  className="mt-4 px-6 py-2 bg-[#0a1833] text-white rounded-lg hover:bg-[#142850] transition-colors text-sm font-medium"
+                >
+                  Reset Filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-10">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-2 rounded-full border hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            {[...Array(totalPages)].map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goToPage(i + 1)}
+                className={`w-8 h-8 flex items-center justify-center rounded-full border text-sm font-medium ${
+                  currentPage === i + 1
+                    ? "bg-black text-white border-black"
+                    : "hover:bg-gray-100 text-gray-800 border-gray-300"
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-full border hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
         )}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-10">
-          <button
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="p-2 rounded-full border hover:bg-gray-100 disabled:opacity-50"
-          >
-            <ChevronLeft size={20} />
-          </button>
-
-          {[...Array(totalPages)].map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goToPage(i + 1)}
-              className={`w-8 h-8 flex items-center justify-center rounded-full border text-sm font-medium ${
-                currentPage === i + 1
-                  ? "bg-black text-white border-black"
-                  : "hover:bg-gray-100 text-gray-800 border-gray-300"
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-
-          <button
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="p-2 rounded-full border hover:bg-gray-100 disabled:opacity-50"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      )}
-    </section>
+      </section>
+    </>
   );
 }
