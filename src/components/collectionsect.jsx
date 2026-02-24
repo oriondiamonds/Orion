@@ -292,12 +292,12 @@ export default function CollectionSection({ id, title, items = [] }) {
       <section className="mt-12 mb-12 px-3 md:px-0">
         {/* Section Title */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <h1
+          {/* <h1
             id={id}
             className="text-4xl md:text-5xl font-bold text-[#0a1833] tracking-tight mb-4 md:mb-0"
           >
             {title}
-          </h1>
+          </h1> */}
 
           {/* Mobile Filter Toggle */}
           <button
