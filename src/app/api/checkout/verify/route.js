@@ -7,6 +7,10 @@ import {
   sendTelegramNotification,
   formatOrderMessage,
 } from "../../../../utils/telegram.js";
+import {
+  sendOrderConfirmationEmail,
+  sendAdminOrderEmail,
+} from "../../../../utils/mailer.js";
 
 export async function POST(request) {
   try {
@@ -125,20 +129,27 @@ export async function POST(request) {
 
     if (customerEmail && source !== "buynow") {
       postPaymentTasks.push(
-        supabaseAdmin
-          .from("carts")
-          .delete()
-          .eq("email", customerEmail.toLowerCase().trim())
-          .catch((err) => console.error("Failed to clear server cart:", err))
+        Promise.resolve(
+          supabaseAdmin
+            .from("carts")
+            .delete()
+            .eq("email", customerEmail.toLowerCase().trim())
+        ).catch((err) => console.error("Failed to clear server cart:", err))
       );
     }
 
     await Promise.all(postPaymentTasks);
 
-    // Telegram notification — fire-and-forget, never blocks the response
+    // Notifications — fire-and-forget, never block the response
     sendTelegramNotification(formatOrderMessage(order)).catch((err) =>
       console.error("Telegram notification error:", err)
     );
+    // sendOrderConfirmationEmail(order).catch((err) =>
+    //   console.error("Customer email error:", err)
+    // );
+    // sendAdminOrderEmail(order).catch((err) =>
+    //   console.error("Admin email error:", err)
+    // );
 
     return NextResponse.json({
       success: true,

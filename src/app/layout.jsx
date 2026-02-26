@@ -11,7 +11,29 @@ import UtmVisitTracker from "../components/UtmVisitTracker";
 import CouponCapture from "../components/CouponCapture";
 
 export const metadata = {
-  title: "Orion Diamonds",
+  title: {
+    default: "Orion Diamonds — Lab-Grown Diamond Jewellery",
+    template: "%s — Orion Diamonds",
+  },
+  description:
+    "Shop certified lab-grown diamond rings, earrings, bracelets and pendants. IGI-certified, ethically sourced, 80% buyback guarantee. Free shipping across India.",
+  openGraph: {
+    siteName: "Orion Diamonds",
+    url: "https://www.oriondiamonds.in",
+    type: "website",
+    images: [
+      {
+        url: "https://www.oriondiamonds.in/nobglogo.png",
+        width: 400,
+        height: 100,
+        alt: "Orion Diamonds",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: { index: true, follow: true },
   icons: {
     icon: "/icon.jpeg",
   },

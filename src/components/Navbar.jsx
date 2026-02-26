@@ -330,14 +330,20 @@ export function Navbar() {
         {[
           { label: "Home", id: "hero" },
           { label: "Collection", id: "collections" },
-          { label: "About Us", id: "about" },
-          { label: "Customizations", id: "customizations" },
-          { label: "FAQs", id: "faqs" },
-          { label: "Contact Us", id: "contact" },
+          { label: "About Us", id: "about", href: "/about" },
+          { label: "Customizations", id: "customizations", href: "/customize" },
+          { label: "FAQs", id: "faqs", href: "/faqs" },
+          { label: "Contact Us", id: "contact", href: "/contact" },
         ].map((link) => (
           <button
             key={link.id}
-            onClick={() => goToSection(link.id)}
+            onClick={() => {
+              if (link.href) {
+                router.push(link.href);
+              } else {
+                goToSection(link.id);
+              }
+            }}
             className="no-underline hover:underline transition cursor-pointer"
           >
             {link.label}
@@ -569,14 +575,21 @@ export function Navbar() {
             {[
               { label: "Home", id: "hero" },
               { label: "Collection", id: "collections" },
-              { label: "About Us", id: "about" },
-              { label: "Customizations", id: "customizations" },
-              { label: "FAQs", id: "faqs" },
-              { label: "Contact Us", id: "contact" },
+              { label: "About Us", id: "about", href: "/about" },
+              { label: "Customizations", id: "customizations", href: "/customize" },
+              { label: "FAQs", id: "faqs", href: "/faqs" },
+              { label: "Contact Us", id: "contact", href: "/contact" },
             ].map((link) => (
               <button
                 key={link.id}
-                onClick={() => goToSection(link.id)}
+                onClick={() => {
+                  if (link.href) {
+                    router.push(link.href);
+                    setMobileMenuOpen(false);
+                  } else {
+                    goToSection(link.id);
+                  }
+                }}
                 className="no-underline hover:underline transition cursor-pointer"
               >
                 {link.label}
