@@ -58,6 +58,17 @@ const nextConfig = {
     ],
   },
 
+  // Proxy /supabase-proxy/* → Supabase (fixes Indian ISP DNS blocking)
+  async rewrites() {
+    return [
+      {
+        source: "/supabase-proxy/:path*",
+        destination:
+          "https://ngjrleoelyckzdtrbkqb.supabase.co/:path*",
+      },
+    ];
+  },
+
   // Preconnect to external origins used for images / APIs
   async headers() {
     return [
@@ -66,10 +77,7 @@ const nextConfig = {
         headers: [
           {
             key: "Link",
-            value: [
-              '<https://ngjrleoelyckzdtrbkqb.supabase.co>; rel="preconnect"',
-              '<https://cdn.shopify.com>; rel="preconnect"',
-            ].join(", "),
+            value: '<https://ngjrleoelyckzdtrbkqb.supabase.co>; rel="preconnect"',
           },
         ],
       },
