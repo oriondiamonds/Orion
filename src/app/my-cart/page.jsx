@@ -7,6 +7,7 @@ import { ShoppingCart, Trash2, Plus, Minus, Tag, X } from "lucide-react";
 import { getProductByHandle } from "../../queries/products";
 import toast from "react-hot-toast";
 import CartItemPriceBreakup from "../../components/CartItemPriceBreakup";
+import { proxySrc } from "../../utils/imgSrc";
 import {
   updateQuantityOnServer,
   removeItemFromServer,
@@ -419,7 +420,7 @@ export default function CartPage() {
                     const productUrl = `/product/${item.handle}?karat=${karat}`;
                     return (
                       <img
-                        src={item.image}
+                        src={proxySrc(item.image, 256)}
                         alt={item.title}
                         className="w-28 h-28 sm:w-24 sm:h-24 object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => router.push(productUrl)}
