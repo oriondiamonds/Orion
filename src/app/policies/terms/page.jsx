@@ -96,9 +96,7 @@ export default function TermsPage() {
             6. Certification
           </h2>
           <p>
-            All diamonds sold by Orion Diamonds are accompanied by{" "}
-            <strong>IGI (International Gemological Institute)</strong> or
-            equivalent certification.
+            All diamonds sold by Orion Diamonds are accompanied by{" "} authentic certification.
           </p>
         </section>
 
@@ -113,20 +111,10 @@ export default function TermsPage() {
           </p>
         </section>
 
-        <section>
-          <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
-            8. Governing Law
-          </h2>
-          <p>
-            These terms are governed by the laws of India. Any disputes shall
-            be subject to the exclusive jurisdiction of the courts in{" "}
-            <strong>Bangalore, Karnataka</strong>.
-          </p>
-        </section>
 
         <section>
           <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
-            9. Contact
+            8. Contact
           </h2>
           <p>
             For questions about these terms:{" "}

@@ -3,7 +3,7 @@ import PolicyNav from "../PolicyNav";
 export const metadata = {
   title: "Returns & Exchange Policy",
   description:
-    "Orion Diamonds offers a 15-day return window, 80% buyback guarantee, and 100% exchange on all lab-grown diamond jewellery purchases.",
+    "Orion Diamonds offers a 15-day return window, diamond buyback at 80% of prevailing market price, and 100% exchange on all lab-grown diamond jewellery.",
 };
 
 export default function ReturnsPage() {
@@ -35,12 +35,27 @@ export default function ReturnsPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
-            2. 80% Buyback Guarantee
+            2. Buyback Policy
           </h2>
-          <p>
-            If you wish to sell back your Orion Diamonds piece at any time, we
-            will buy it back at <strong>80% of the original invoice value</strong>.
-          </p>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>
+              Diamonds will be repurchased at <strong>80% of the prevailing
+              market price</strong> of that particular diamond on the date of
+              return, as determined by Orion Diamonds.
+            </li>
+            <li>
+              Gold value will be calculated as per the prevailing gold rate on
+              the date of return.
+            </li>
+            <li>
+              All buybacks are subject to inspection, verification, and
+              presentation of the original invoice.
+            </li>
+            <li>
+              Orion Diamonds reserves the right to determine final valuation
+              and amend this policy without prior notice.
+            </li>
+          </ul>
         </section>
 
         <section>

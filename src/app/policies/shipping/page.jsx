@@ -39,12 +39,10 @@ export default function ShippingPage() {
           </h2>
           <ul className="list-disc pl-5 space-y-1">
             <li>
-              <strong>Standard pieces:</strong> 7–15 business days from order
+              <strong>Standard pieces:</strong> 2-3 weeks from order
               confirmation
             </li>
-            <li>
-              <strong>Custom / personalised pieces:</strong> 15–25 business days
-            </li>
+            
           </ul>
           <p className="mt-2">
             Timeline begins after payment is confirmed.
