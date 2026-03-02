@@ -2,9 +2,10 @@
 node_modules
 .env
 .env.local
+.env*.local
 .env.production.local
 .DS_Store
-*.loggit reset --soft HEAD~1
-.next/
-.env
-.env*.local
+
+.claude
+_bmad
+_bmad-output

@@ -30,6 +30,18 @@ const nextConfig = {
       "lucide-react",
       "@supabase/supabase-js",
     ],
+    // Keep heavy server-only packages external (not bundled into each function)
+    serverExternalPackages: ["mongoose", "mongodb", "nodemailer", "razorpay"],
+  },
+
+  // Exclude dead legacy files from serverless function traces
+  outputFileTracingExcludes: {
+    "*": [
+      "node_modules/mongoose/**",
+      "node_modules/mongodb/**",
+      "node_modules/bson/**",
+      "node_modules/kerberos/**",
+    ],
   },
 };
 
