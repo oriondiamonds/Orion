@@ -20,7 +20,7 @@ const SEARCH_ENGINE_DOMAINS = [
   "baidu.com", "yandex.com", "yandex.ru",
 ];
 
-export function middleware(request) {
+export function proxy(request) {
   const { searchParams, pathname } = request.nextUrl;
   const response = NextResponse.next();
 

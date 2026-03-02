@@ -78,6 +78,9 @@ const nextConfig = {
       "lucide-react",
       "@supabase/supabase-js",
     ],
+   
+  turbopack: false,
+
   },
 };
 
