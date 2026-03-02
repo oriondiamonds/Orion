@@ -48,7 +48,7 @@ export function Footer() {
 
           {/* Col 2 — Shop */}
           <div>
-            <h3 className="text-[#c9a84c] text-xs font-semibold tracking-[3px] uppercase mb-5">
+            <h3 className="text-[#c9a84c] text-md font-semibold tracking-[3px] uppercase mb-5">
               Shop
             </h3>
             <ul className="space-y-3 text-sm text-gray-300">
@@ -62,7 +62,7 @@ export function Footer() {
 
           {/* Col 3 — Company */}
           <div>
-            <h3 className="text-[#c9a84c] text-xs font-semibold tracking-[3px] uppercase mb-5">
+            <h3 className="text-[#c9a84c] text-md font-semibold tracking-[3px] uppercase mb-5">
               Company
             </h3>
             <ul className="space-y-3 text-sm text-gray-300">
@@ -74,7 +74,7 @@ export function Footer() {
 
           {/* Col 4 — Support */}
           <div>
-            <h3 className="text-[#c9a84c] text-xs font-semibold tracking-[3px] uppercase mb-5">
+            <h3 className="text-[#c9a84c] text-md font-semibold tracking-[3px] uppercase mb-5">
               Support
             </h3>
             <ul className="space-y-3 text-sm text-gray-300">

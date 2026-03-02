@@ -16,7 +16,7 @@ export default function TermsPage() {
         <h1 className="text-3xl md:text-4xl font-light text-white tracking-wide">
           Terms of Service
         </h1>
-        <p className="text-gray-400 mt-2 text-sm">Effective: January 2026</p>
+        {/* <p className="text-gray-400 mt-2 text-sm">Effective: January 2026</p> */}
       </div>
 
       <PolicyNav />
@@ -24,7 +24,7 @@ export default function TermsPage() {
       <div className="max-w-3xl mx-auto px-6 py-12 space-y-8 text-gray-700 leading-relaxed">
 
         <section>
-          <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
+          <h2 className="text-xl md:text-2xl font-black text-[#0a1833] mb-3">
             1. Acceptance
           </h2>
           <p>
@@ -33,7 +33,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
+          <h2 className="text-xl md:text-2xl font-black text-[#0a1833] mb-3">
             2. Pricing
           </h2>
           <ul className="list-disc pl-5 space-y-1">
@@ -52,7 +52,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
+          <h2 className="text-xl md:text-2xl font-black text-[#0a1833] mb-3">
             3. Order Confirmation
           </h2>
           <p>
@@ -62,7 +62,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
+          <h2 className="text-xl md:text-2xl font-black text-[#0a1833] mb-3">
             4. Cancellation
           </h2>
           <ul className="list-disc pl-5 space-y-1">
@@ -81,7 +81,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
+          <h2 className="text-xl md:text-2xl font-black text-[#0a1833] mb-3">
             5. Product Descriptions
           </h2>
           <p>
@@ -92,7 +92,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
+          <h2 className="text-xl md:text-2xl font-black text-[#0a1833] mb-3">
             6. Certification
           </h2>
           <p>
@@ -101,7 +101,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
+          <h2 className="text-xl md:text-2xl font-black text-[#0a1833] mb-3">
             7. Limitation of Liability
           </h2>
           <p>
@@ -113,7 +113,7 @@ export default function TermsPage() {
 
 
         <section>
-          <h2 className="text-lg font-semibold text-[#0a1833] mb-2">
+          <h2 className="text-xl md:text-2xl font-black text-[#0a1833] mb-3">
             8. Contact
           </h2>
           <p>
