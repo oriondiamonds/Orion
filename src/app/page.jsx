@@ -275,316 +275,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* About Section */}
-      <section id="about" className="py-16 px-6 md:px-16 lg:px-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          {/* Card container */}
-
-          {/* Heading */}
-          <h2 className="text-4xl font-semibold mb-8">About Orion Diamonds</h2>
-
-          {/* Content layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
-            {/* Left - Image */}
-            <div className="relative w-full rounded-xl shadow-lg overflow-hidden" style={{ aspectRatio: "1001/795" }}>
-              <Image
-                src="/aboutus.png"
-                alt="About Orion Diamonds"
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-              />
-            </div>
-
-            {/* Right - Text */}
-            <div className="space-y-6 text-lg leading-relaxed">
-              <p>
-                At <span className="font-semibold">Orion</span>, our story began
-                with a simple yet defining moment – the search for the perfect
-                engagement ring. What should have been a joyful experience
-                turned into a journey of uncertainty and unanswered questions.
-              </p>
-
-              <p>
-                That moment inspired our vision: to make diamond shopping
-                effortless, transparent, and meaningful. Founded and led by a
-                young female entrepreneur and certified Diamond Graduate, Orion
-                is built on expertise, integrity, and a deep passion for
-                craftsmanship.
-              </p>
-
-              <p>
-                With a modern perspective and a genuine understanding of what
-                today's buyers seek, we bring clarity, confidence, and care to
-                every diamond journey. Each of our diamonds is hand-selected,
-                ethically grown, and crafted to perfection – ensuring brilliance
-                that reflects both light and emotion.
-              </p>
-
-              <p>
-                More than just a jewellery brand, we are a trusted companion in
-                celebrating life's most cherished moments – guiding you towards
-                pieces that are timeless, personal, and truly yours.
-              </p>
-              <div className="text-right mt-8">
-                <p className="text-[#b49c73] font-semibold">Founder</p>
-                <p className="text-[#b49c73] font-semibold text-lg">
-                  – Dr. Vandana Jain
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Promise Section */}
-      <OurPromise />
-
-      {/* Learn Section */}
-      <section id="learn" className="py-16 px-6 md:px-16 lg:px-24">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-semibold mb-6 text-[#0a1833]">
-            The Orion Difference
-          </h2>
-          <p className="text-[#0a1833] mb-6">Lab grown vs Natural Diamonds</p>
-
-          {/* Dropdown Button */}
-          <button
-            onClick={() => setOpen(!open)}
-            className="flex items-center justify-between w-full bg-[#0a1833] text-white px-6 py-4 rounded-lg text-lg font-medium focus:outline-none transition-all duration-200 hover:bg-[#13254d]"
-          >
-            <span>View Full Comparison</span>
-            {open ? <ChevronUp size={22} /> : <ChevronDown size={22} />}
-          </button>
-
-          {/* Dropdown Content */}
-          {open && (
-            <div className="mt-6 overflow-x-auto transition-all duration-300">
-              <table className="min-w-full border border-gray-300 rounded-xl overflow-hidden text-[#0a1833]">
-                <thead className="bg-[#0a1833] text-white">
-                  <tr>
-                    <th className="p-4 text-left">Feature</th>
-                    <th className="p-4 text-left">
-                      Lab-Grown Diamonds (The Orion Choice)
-                    </th>
-                    <th className="p-4 text-left">
-                      Mined Diamonds (The Classic Choice)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  <tr className="border-t">
-                    <td className="p-4 font-semibold">What They Really Are</td>
-                    <td className="p-4">
-                      A true diamond. Made of 100% crystallized carbon, sharing
-                      the exact same chemical, physical, and optical properties
-                      as their mined counterparts.
-                    </td>
-                    <td className="p-4">
-                      A true diamond. Also 100% carbon, formed deep underground.
-                    </td>
-                  </tr>
-                  <tr className="border-t bg-gray-50">
-                    <td className="p-4 font-semibold">The Brilliance</td>
-                    <td className="p-4">
-                      Identical. They have the same fire, scintillation, and
-                      shine. They are just as hard and durable (10 on the Mohs
-                      scale) for a lifetime of wear.
-                    </td>
-                    <td className="p-4">
-                      Identical. They display the same stunning visual
-                      qualities.
-                    </td>
-                  </tr>
-                  <tr className="border-t">
-                    <td className="p-4 font-semibold">The Story (Origin)</td>
-                    <td className="p-4">
-                      Born of Innovation. Grown in a modern, controlled lab
-                      environment using advanced technology that mimics the
-                      Earth's natural process.
-                    </td>
-                    <td className="p-4">
-                      Born of the Earth. Formed by immense heat and pressure
-                      over billions of years.
-                    </td>
-                  </tr>
-                  <tr className="border-t bg-gray-50">
-                    <td className="p-4 font-semibold">The Price</td>
-                    <td className="p-4">
-                      Smarter Value. Because the production chain is efficient,
-                      you get a much larger or higher-quality diamond for your
-                      budget.
-                    </td>
-                    <td className="p-4">
-                      Premium Cost. Prices are higher due to the significant
-                      expenses of complex mining operations and perceived
-                      rarity.
-                    </td>
-                  </tr>
-                  <tr className="border-t">
-                    <td className="p-4 font-semibold">The Ethics</td>
-                    <td className="p-4">
-                      Guaranteed Conflict-Free. Every stone is fully traceable
-                      from its origin in the lab directly to you. No ethical
-                      ambiguity.
-                    </td>
-                    <td className="p-4">
-                      Sourcing requires checks (like the Kimberley Process) to
-                      ensure stones are conflict-free.
-                    </td>
-                  </tr>
-                  <tr className="border-t bg-gray-50">
-                    <td className="p-4 font-semibold">The Environment</td>
-                    <td className="p-4">
-                      A Responsible Choice. Production avoids the large-scale
-                      land disruption, ecological damage, and excessive energy
-                      and water use of mining.
-                    </td>
-                    <td className="p-4">
-                      Requires digging and excavation, which carries a larger
-                      environmental footprint.
-                    </td>
-                  </tr>
-                  <tr className="border-t">
-                    <td className="p-4 font-semibold">Certification</td>
-                    <td className="p-4">
-                      Fully Certified. Graded by the same independent labs (GIA,
-                      IGI) on the same 4Cs. They are inscribed as "LAB GROWN"
-                      for complete transparency.
-                    </td>
-                    <td className="p-4">
-                      Fully Certified and graded on the same 4Cs.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Orion Promise Section */}
-          <div className="mt-10 bg-white text-[#0a1833] p-8 md:p-10 rounded-2xl shadow-xl">
-            <h3 className="text-3xl font-semibold mb-4">
-              The Orion Promise: Brilliance Without Compromise
-            </h3>
-            <p className="text-lg leading-relaxed">
-              At Orion Diamonds, the choice between lab-grown and mined is no
-              longer about quality – it's about values. Our diamonds deliver the
-              same fire, brilliance, and lasting beauty as mined ones, with an
-              origin you can feel proud of – offering smarter value, a clear
-              conscience, and zero compromise.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Taking Care */}
-      <section id="care" className="py-16 px-6 md:px-16 lg:px-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          {/* Full-width heading and intro */}
-          <div className="mb-10 text-[#0a1833]">
-            <h2 className="text-4xl font-semibold mb-6">
-              The Orion Care Guide: Keep the Sparkle Alive
-            </h2>
-            <p className="text-lg leading-relaxed">
-              Even the most brilliant diamond can lose its sparkle over time as
-              oils, lotions, and dust settle on its surface. The good news? You
-              can easily bring back that "just-bought" shine right at home –
-              with gentle care and a few simple steps.
-            </p>
-          </div>
-
-          {/* Dropdown Button */}
-          <button
-            onClick={() => setOpenCare(!openCare)}
-            className="flex items-center justify-between w-full bg-[#0a1833] text-white px-6 py-4 rounded-lg text-lg font-medium focus:outline-none transition-all duration-200 hover:bg-[#13254d]"
-          >
-            <span>View Care Instructions</span>
-            {openCare ? <ChevronUp size={22} /> : <ChevronDown size={22} />}
-          </button>
-
-          {/* Dropdown Content */}
-          {openCare && (
-            <div className="mt-6 transition-all duration-300">
-              {/* Two-column section for points and image */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
-                {/* Left Side - Care Steps */}
-                <div className="text-[#0a1833] space-y-6">
-                  <div>
-                    <h3 className="font-semibold text-lg mb-1">
-                      1. Clean with Care
-                    </h3>
-                    <p>
-                      Soak your piece in warm, soapy water for a few minutes and
-                      gently brush with a soft toothbrush.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-lg mb-1">
-                      2. Rinse & Dry
-                    </h3>
-                    <p>
-                      Rinse under clean water and dry with a soft, lint-free
-                      cloth.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-lg mb-1">
-                      3. Avoid Harsh Chemicals
-                    </h3>
-                    <p>
-                      Keep your jewellery away from bleach, acetone, and
-                      abrasive cleaners.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-lg mb-1">
-                      4. Handle Gently
-                    </h3>
-                    <p>
-                      Hold by the band or edges to maintain the diamond's
-                      brilliance.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-lg mb-1">
-                      5. Professional Care
-                    </h3>
-                    <p>
-                      A professional cleaning once or twice a year keeps your
-                      diamonds secure and radiant.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right Side - Image */}
-                <div className="relative w-full rounded-2xl shadow-lg overflow-hidden" style={{ aspectRatio: "1/1" }}>
-                  <Image
-                    src="/care.png"
-                    alt="Diamond Care"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    className="object-cover"
-                  />
-                </div>
-              </div>
-
-              {/* Full-width Orion Tip */}
-              <div className="mt-10 bg-white text-[#0a1833] p-8 rounded-2xl shadow-xl">
-                <h3 className="text-2xl font-semibold mb-2">Orion Tip:</h3>
-                <p className="text-lg leading-relaxed">
-                  Store your diamond pieces separately in soft pouches or lined
-                  boxes to prevent scratches – and let your brilliance shine,
-                  every day.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* Customizations */}
       <section id="customizations" className="py-16 px-6 md:px-16 lg:px-24">
@@ -743,8 +433,313 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* About Section */}
+      {/* <section id="about" className="py-16 px-6 md:px-16 lg:px-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          
+          <h2 className="text-4xl font-semibold mb-8">About Orion Diamonds</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+            <div className="relative w-full rounded-xl shadow-lg overflow-hidden" style={{ aspectRatio: "1001/795" }}>
+              <Image
+                src="/aboutus.png"
+                alt="About Orion Diamonds"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+              />
+            </div>
+
+            <div className="space-y-6 text-lg leading-relaxed">
+              <p>
+                At <span className="font-semibold">Orion</span>, our story began
+                with a simple yet defining moment – the search for the perfect
+                engagement ring. What should have been a joyful experience
+                turned into a journey of uncertainty and unanswered questions.
+              </p>
+
+              <p>
+                That moment inspired our vision: to make diamond shopping
+                effortless, transparent, and meaningful. Founded and led by a
+                young female entrepreneur and certified Diamond Graduate, Orion
+                is built on expertise, integrity, and a deep passion for
+                craftsmanship.
+              </p>
+
+              <p>
+                With a modern perspective and a genuine understanding of what
+                today's buyers seek, we bring clarity, confidence, and care to
+                every diamond journey. Each of our diamonds is hand-selected,
+                ethically grown, and crafted to perfection – ensuring brilliance
+                that reflects both light and emotion.
+              </p>
+
+              <p>
+                More than just a jewellery brand, we are a trusted companion in
+                celebrating life's most cherished moments – guiding you towards
+                pieces that are timeless, personal, and truly yours.
+              </p>
+              <div className="text-right mt-8">
+                <p className="text-[#b49c73] font-semibold">Founder</p>
+                <p className="text-[#b49c73] font-semibold text-lg">
+                  – Dr. Vandana Jain
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section> */}
+
+      {/* Promise Section */}
+      <OurPromise />
+
+      {/* Learn Section */}
+      {/* <section id="learn" className="py-16 px-6 md:px-16 lg:px-24">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-4xl font-semibold mb-6 text-[#0a1833]">
+            The Orion Difference
+          </h2>
+          <p className="text-[#0a1833] mb-6">Lab grown vs Natural Diamonds</p>
+
+          <button
+            onClick={() => setOpen(!open)}
+            className="flex items-center justify-between w-full bg-[#0a1833] text-white px-6 py-4 rounded-lg text-lg font-medium focus:outline-none transition-all duration-200 hover:bg-[#13254d]"
+          >
+            <span>View Full Comparison</span>
+            {open ? <ChevronUp size={22} /> : <ChevronDown size={22} />}
+          </button>
+
+          {open && (
+            <div className="mt-6 overflow-x-auto transition-all duration-300">
+              <table className="min-w-full border border-gray-300 rounded-xl overflow-hidden text-[#0a1833]">
+                <thead className="bg-[#0a1833] text-white">
+                  <tr>
+                    <th className="p-4 text-left">Feature</th>
+                    <th className="p-4 text-left">
+                      Lab-Grown Diamonds (The Orion Choice)
+                    </th>
+                    <th className="p-4 text-left">
+                      Mined Diamonds (The Classic Choice)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  <tr className="border-t">
+                    <td className="p-4 font-semibold">What They Really Are</td>
+                    <td className="p-4">
+                      A true diamond. Made of 100% crystallized carbon, sharing
+                      the exact same chemical, physical, and optical properties
+                      as their mined counterparts.
+                    </td>
+                    <td className="p-4">
+                      A true diamond. Also 100% carbon, formed deep underground.
+                    </td>
+                  </tr>
+                  <tr className="border-t bg-gray-50">
+                    <td className="p-4 font-semibold">The Brilliance</td>
+                    <td className="p-4">
+                      Identical. They have the same fire, scintillation, and
+                      shine. They are just as hard and durable (10 on the Mohs
+                      scale) for a lifetime of wear.
+                    </td>
+                    <td className="p-4">
+                      Identical. They display the same stunning visual
+                      qualities.
+                    </td>
+                  </tr>
+                  <tr className="border-t">
+                    <td className="p-4 font-semibold">The Story (Origin)</td>
+                    <td className="p-4">
+                      Born of Innovation. Grown in a modern, controlled lab
+                      environment using advanced technology that mimics the
+                      Earth's natural process.
+                    </td>
+                    <td className="p-4">
+                      Born of the Earth. Formed by immense heat and pressure
+                      over billions of years.
+                    </td>
+                  </tr>
+                  <tr className="border-t bg-gray-50">
+                    <td className="p-4 font-semibold">The Price</td>
+                    <td className="p-4">
+                      Smarter Value. Because the production chain is efficient,
+                      you get a much larger or higher-quality diamond for your
+                      budget.
+                    </td>
+                    <td className="p-4">
+                      Premium Cost. Prices are higher due to the significant
+                      expenses of complex mining operations and perceived
+                      rarity.
+                    </td>
+                  </tr>
+                  <tr className="border-t">
+                    <td className="p-4 font-semibold">The Ethics</td>
+                    <td className="p-4">
+                      Guaranteed Conflict-Free. Every stone is fully traceable
+                      from its origin in the lab directly to you. No ethical
+                      ambiguity.
+                    </td>
+                    <td className="p-4">
+                      Sourcing requires checks (like the Kimberley Process) to
+                      ensure stones are conflict-free.
+                    </td>
+                  </tr>
+                  <tr className="border-t bg-gray-50">
+                    <td className="p-4 font-semibold">The Environment</td>
+                    <td className="p-4">
+                      A Responsible Choice. Production avoids the large-scale
+                      land disruption, ecological damage, and excessive energy
+                      and water use of mining.
+                    </td>
+                    <td className="p-4">
+                      Requires digging and excavation, which carries a larger
+                      environmental footprint.
+                    </td>
+                  </tr>
+                  <tr className="border-t">
+                    <td className="p-4 font-semibold">Certification</td>
+                    <td className="p-4">
+                      Fully Certified. Graded by the same independent labs (GIA,
+                      IGI) on the same 4Cs. They are inscribed as "LAB GROWN"
+                      for complete transparency.
+                    </td>
+                    <td className="p-4">
+                      Fully Certified and graded on the same 4Cs.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="mt-10 bg-white text-[#0a1833] p-8 md:p-10 rounded-2xl shadow-xl">
+            <h3 className="text-3xl font-semibold mb-4">
+              The Orion Promise: Brilliance Without Compromise
+            </h3>
+            <p className="text-lg leading-relaxed">
+              At Orion Diamonds, the choice between lab-grown and mined is no
+              longer about quality – it's about values. Our diamonds deliver the
+              same fire, brilliance, and lasting beauty as mined ones, with an
+              origin you can feel proud of – offering smarter value, a clear
+              conscience, and zero compromise.
+            </p>
+          </div>
+        </div>
+      </section> */}
+
+      {/* Taking Care */}
+      <section id="care" className="py-16 px-6 md:px-16 lg:px-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          {/* Full-width heading and intro */}
+          <div className="mb-10 text-[#0a1833]">
+            <h2 className="text-4xl font-semibold mb-6">
+              The Orion Care Guide: Keep the Sparkle Alive
+            </h2>
+            <p className="text-lg leading-relaxed">
+              Even the most brilliant diamond can lose its sparkle over time as
+              oils, lotions, and dust settle on its surface. The good news? You
+              can easily bring back that "just-bought" shine right at home –
+              with gentle care and a few simple steps.
+            </p>
+          </div>
+
+          {/* Dropdown Button */}
+          <button
+            onClick={() => setOpenCare(!openCare)}
+            className="flex items-center justify-between w-full bg-[#0a1833] text-white px-6 py-4 rounded-lg text-lg font-medium focus:outline-none transition-all duration-200 hover:bg-[#13254d]"
+          >
+            <span>View Care Instructions</span>
+            {openCare ? <ChevronUp size={22} /> : <ChevronDown size={22} />}
+          </button>
+
+          {/* Dropdown Content */}
+          {openCare && (
+            <div className="mt-6 transition-all duration-300">
+              {/* Two-column section for points and image */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+                {/* Left Side - Care Steps */}
+                <div className="text-[#0a1833] space-y-6">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">
+                      1. Clean with Care
+                    </h3>
+                    <p>
+                      Soak your piece in warm, soapy water for a few minutes and
+                      gently brush with a soft toothbrush.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">
+                      2. Rinse & Dry
+                    </h3>
+                    <p>
+                      Rinse under clean water and dry with a soft, lint-free
+                      cloth.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">
+                      3. Avoid Harsh Chemicals
+                    </h3>
+                    <p>
+                      Keep your jewellery away from bleach, acetone, and
+                      abrasive cleaners.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">
+                      4. Handle Gently
+                    </h3>
+                    <p>
+                      Hold by the band or edges to maintain the diamond's
+                      brilliance.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">
+                      5. Professional Care
+                    </h3>
+                    <p>
+                      A professional cleaning once or twice a year keeps your
+                      diamonds secure and radiant.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right Side - Image */}
+                <div className="relative w-full rounded-2xl shadow-lg overflow-hidden" style={{ aspectRatio: "1/1" }}>
+                  <Image
+                    src="/care.png"
+                    alt="Diamond Care"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+
+              {/* Full-width Orion Tip */}
+              <div className="mt-10 bg-white text-[#0a1833] p-8 rounded-2xl shadow-xl">
+                <h3 className="text-2xl font-semibold mb-2">Orion Tip:</h3>
+                <p className="text-lg leading-relaxed">
+                  Store your diamond pieces separately in soft pouches or lined
+                  boxes to prevent scratches – and let your brilliance shine,
+                  every day.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      
+
       {/* Accordion Sections */}
-      <section id="faqs" className="py-16 px-6 md:px-16 lg:px-24 bg-gray-50">
+      {/* <section id="faqs" className="py-16 px-6 md:px-16 lg:px-24 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-semibold mb-8 text-[#0a1833]">
             Frequently Asked Questions
@@ -845,7 +840,7 @@ export default function Landing() {
             </div>
           ))}
         </div>
-      </section>
+      </section> */}
     </div>
   );
 }
