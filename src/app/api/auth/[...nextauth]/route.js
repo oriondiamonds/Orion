@@ -2,7 +2,8 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import InstagramProvider from "next-auth/providers/instagram";
-import CredentialsProvider from "next-auth/providers/credentials";
+// import CredentialsProvider from "next-auth/providers/credentials";
+import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "../../../../utils/supabase-admin.js";
@@ -58,7 +59,7 @@ async function recordOAuthUtm(email, authProvider) {
 
 const handler = NextAuth({
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: "Email",
       credentials: {
         email: { label: "Email", type: "email" },
