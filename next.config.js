@@ -44,20 +44,6 @@ const nextConfig = {
     pagesBufferLength: 5,
   },
 
-  // Middleware configuration
-  middleware: {
-    matcher: [
-      /*
-       * Match all request paths except for the ones starting with:
-       * - api (API routes)
-       * - _next/static (static files)
-       * - _next/image (image optimization files)
-       * - favicon.ico (favicon file)
-       */
-      "/((?!api|_next/static|_next/image|favicon.ico).*)",
-    ],
-  },
-
   // Proxy /supabase-proxy/* → Supabase (fixes Indian ISP DNS blocking)
   // async rewrites() {
   //   return [
@@ -69,8 +55,6 @@ const nextConfig = {
   //   ];
   // },
 
-  // Build optimization
-  swcMinify: true,
   experimental: {
     // Optimize package imports for better bundle size
     optimizePackageImports: [

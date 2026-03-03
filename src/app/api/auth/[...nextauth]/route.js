@@ -1,9 +1,8 @@
 // src/app/api/auth/[...nextauth]/route.js
 import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import InstagramProvider from "next-auth/providers/instagram";
-// import CredentialsProvider from "next-auth/providers/credentials";
-import Credentials from "next-auth/providers/credentials";
+import CredentialsProviderImport from "next-auth/providers/credentials";
+import GoogleProviderImport from "next-auth/providers/google";
+import InstagramProviderImport from "next-auth/providers/instagram";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "../../../../utils/supabase-admin.js";
@@ -57,9 +56,31 @@ async function recordOAuthUtm(email, authProvider) {
   }
 }
 
+function resolveProvider(providerImport, name) {
+  const provider =
+    typeof providerImport === "function"
+      ? providerImport
+      : providerImport?.default;
+
+  if (typeof provider !== "function") {
+    throw new Error(`${name} provider import is not a function`);
+  }
+  return provider;
+}
+
+const CredentialsProvider = resolveProvider(
+  CredentialsProviderImport,
+  "Credentials"
+);
+const GoogleProvider = resolveProvider(GoogleProviderImport, "Google");
+const InstagramProvider = resolveProvider(
+  InstagramProviderImport,
+  "Instagram"
+);
+
 const handler = NextAuth({
   providers: [
-    Credentials({
+    CredentialsProvider({
       name: "Email",
       credentials: {
         email: { label: "Email", type: "email" },
