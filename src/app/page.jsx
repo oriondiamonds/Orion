@@ -240,7 +240,7 @@ export default function Landing() {
             Collections
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { name: "Rings", img: "/rings.jpg", link: "/rings" },
               { name: "Earrings", img: "/earrings.jpeg", link: "/earrings" },
@@ -249,7 +249,7 @@ export default function Landing() {
             ].map((item, i) => (
               <div
                 key={i}
-                className="relative h-110 rounded-2xl overflow-hidden shadow-lg group cursor-pointer"
+                className="relative h-44 md:h-110 rounded-2xl overflow-hidden shadow-lg group cursor-pointer"
                 onClick={() => router.push(item.link)}
               >
                 <Image
@@ -261,7 +261,7 @@ export default function Landing() {
                 />
 
                 {/* Mobile title (always visible) */}
-                <div className="absolute top-3 left-3 w-fit bg-[#808080]/60 text-white px-3 py-1 rounded-full text-xl font-medium md:hidden">
+                <div className="absolute top-3 left-3 w-fit bg-[#808080]/60 text-white px-3 py-1 rounded-full text-sm md:text-xl font-medium md:hidden">
                   {item.name}
                 </div>
 
