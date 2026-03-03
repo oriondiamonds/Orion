@@ -25,6 +25,8 @@ const EMPTY_PRODUCT = {
   handle: "",
   description: "",
   description_html: "",
+  is_bestseller: false,
+  is_featured: false,
   images: [],
   options: [],
   variants: [],
@@ -186,6 +188,8 @@ export default function AdminProductsPage() {
         handle: p.handle || "",
         description: p.description || "",
         description_html: p.description_html || "",
+        is_bestseller: p.is_bestseller ?? false,
+        is_featured: p.is_featured ?? false,
         images: (p.images || []).map((img) => ({
           url: img.url,
           alt_text: img.alt_text || "",
@@ -259,6 +263,8 @@ export default function AdminProductsPage() {
         handle: formData.handle || slugify(formData.title),
         description: formData.description || null,
         description_html: formData.description_html || null,
+        is_bestseller: !!formData.is_bestseller,
+        is_featured: !!formData.is_featured,
         featured_image_url: formData.images[0]?.url || null,
         featured_image_alt:
           formData.images[0]?.alt_text || formData.title,
@@ -520,6 +526,10 @@ export default function AdminProductsPage() {
       if (filterBy === "unpriced" && p.has_pricing) return false;
       if (filterBy === "no-image" && p.featured_image_url) return false;
       if (filterBy === "no-variants" && p.variant_count > 0) return false;
+      if (filterBy === "bestseller" && !p.is_bestseller) return false;
+      if (filterBy === "featured" && !p.is_featured) return false;
+      if (filterBy === "both" && !(p.is_bestseller && p.is_featured))
+        return false;
       // Collection filter
       if (collectionFilter !== "all") {
         if (!(p.collections || []).includes(collectionFilter)) return false;
@@ -699,6 +709,9 @@ export default function AdminProductsPage() {
                   { value: "unpriced", label: "Unpriced" },
                   { value: "no-image", label: "No image" },
                   { value: "no-variants", label: "No variants" },
+                  { value: "bestseller", label: "Best Seller" },
+                  { value: "featured", label: "Featured" },
+                  { value: "both", label: "Both" },
                 ].map((f) => (
                   <button
                     key={f.value}
@@ -780,6 +793,41 @@ export default function AdminProductsPage() {
                       placeholder="Brief product description..."
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Product Flags
+                    </label>
+                    <div className="flex flex-wrap gap-4">
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={!!formData.is_bestseller}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              is_bestseller: e.target.checked,
+                            })
+                          }
+                          className="rounded border-gray-300"
+                        />
+                        Best Seller
+                      </label>
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={!!formData.is_featured}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              is_featured: e.target.checked,
+                            })
+                          }
+                          className="rounded border-gray-300"
+                        />
+                        Featured
+                      </label>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1495,6 +1543,16 @@ export default function AdminProductsPage() {
                         </span>
                         {product.has_pricing && (
                           <span className="text-green-600">Priced</span>
+                        )}
+                        {product.is_bestseller && (
+                          <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-medium">
+                            Best Seller
+                          </span>
+                        )}
+                        {product.is_featured && (
+                          <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-medium">
+                            Featured
+                          </span>
                         )}
                         {(product.collections || []).map((col) => (
                           <span

@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FiMenu } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import OurPromise from "../components/promise";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { getBestSellers, getFeaturedProducts } from "../queries/products";
+import { formatIndianCurrency } from "../utils/formatIndianCurrency";
+import { getSheetPricing } from "../utils/sheetPricing";
 
 export default function Landing() {
   const [activeAccordion, setActiveAccordion] = useState(null);
@@ -15,6 +19,11 @@ export default function Landing() {
     setActiveAccordion(activeAccordion === section ? null : section);
   };
   const [open, setOpen] = useState(false);
+  const [bestSellers, setBestSellers] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [sheetPricing, setSheetPricing] = useState({});
+  const bestSellersSliderRef = useRef(null);
+  const featuredSliderRef = useRef(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -99,6 +108,48 @@ export default function Landing() {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadCuratedProducts() {
+      const [bestsellerData, featuredData] = await Promise.all([
+        getBestSellers(8),
+        getFeaturedProducts(8),
+      ]);
+      const pricingMap = await getSheetPricing();
+
+      if (!mounted) return;
+      setBestSellers(bestsellerData);
+      setFeaturedProducts(featuredData);
+      setSheetPricing(pricingMap || {});
+    }
+
+    loadCuratedProducts();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const getCollectionMatchedPrice = (product) => {
+    const byHandle = sheetPricing?.[product.handle];
+    return byHandle?.price10K || product.price || 0;
+  };
+
+  const scrollSlider = (ref, direction) => {
+    const slider = ref.current;
+    if (!slider) return;
+    const card = slider.querySelector("[data-slider-card='true']");
+    if (!card) return;
+    const cardsToMove = window.innerWidth >= 768 ? 4 : 2;
+    const cardWidth = card.getBoundingClientRect().width;
+    const styles = window.getComputedStyle(slider);
+    const gap = parseFloat(styles.columnGap || styles.gap || "16") || 16;
+    const delta = (cardWidth + gap) * cardsToMove * direction;
+
+    slider.scrollBy({ left: delta, behavior: "smooth" });
+  };
 
   return (
     <div id="hero" className="min-h-screen text-gray-900 antialiased">
@@ -232,6 +283,8 @@ export default function Landing() {
           ))}
         </div>
       </header>
+
+      
 
       {/* Collections Section */}
       <section id="collections" className="py-16 px-6 md:px-16 lg:px-24">
@@ -431,6 +484,163 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+
+      {(bestSellers.length > 0 || featuredProducts.length > 0) && (
+        <section className="py-16 px-6 md:px-16 lg:px-24 bg-[#f7f5f2]">
+          <div className="max-w-7xl mx-auto space-y-12">
+            {bestSellers.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-3xl font-semibold text-[#0a1833]">
+                    Best Sellers
+                  </h2>
+                  <Link
+                    href="/rings"
+                    className="text-sm font-medium text-[#0a1833] underline"
+                  >
+                    View all
+                  </Link>
+                </div>
+                <div className="flex items-center gap-2 md:gap-3">
+                  <button
+                    type="button"
+                    onClick={() => scrollSlider(bestSellersSliderRef, -1)}
+                    className="hidden md:inline-flex shrink-0 p-2.5 rounded-full border border-gray-200 bg-white shadow-md hover:bg-gray-50"
+                    aria-label="Scroll best sellers left"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <div className="relative flex-1 overflow-hidden">
+                    <div className="absolute inset-y-0 left-0 w-10 z-[5] bg-linear-to-r from-[#f7f5f2] to-transparent pointer-events-none" />
+                    <div className="absolute inset-y-0 right-0 w-10 z-[5] bg-linear-to-l from-[#f7f5f2] to-transparent pointer-events-none" />
+                    <div
+                      ref={bestSellersSliderRef}
+                      className="grid grid-flow-col auto-cols-[calc((100%_-_10px)/2)] md:auto-cols-[calc((100%_-_48px)/4)] gap-[10px] md:gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2"
+                      style={{ scrollbarWidth: "none" }}
+                    >
+                      {bestSellers.map((product) => (
+                        <button
+                          key={`bs-${product.id}`}
+                          data-slider-card="true"
+                          onClick={() => router.push(`/product/${product.handle}`)}
+                          className="snap-start text-left bg-white rounded-2xl border border-[#ece7df] shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)] transition overflow-hidden"
+                        >
+                          <div className="relative aspect-[4/5] bg-gray-100">
+                            {product.image ? (
+                              <Image
+                                src={product.image}
+                                alt={product.imageAlt}
+                                fill
+                                sizes="(max-width: 768px) 50vw, 25vw"
+                                className="object-cover"
+                              />
+                            ) : null}
+                          </div>
+                          <div className="p-4">
+                            {/* <p className="text-xs font-medium text-amber-700 mb-1">
+                              Best Seller
+                            </p> */}
+                            <h3 className="text-sm md:text-base font-medium text-[#0a1833] line-clamp-2">
+                              {product.title}
+                            </h3>
+                            <p className="text-sm font-semibold text-[#0a1833] mt-1">
+                              Starting {formatIndianCurrency(getCollectionMatchedPrice(product), false)}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => scrollSlider(bestSellersSliderRef, 1)}
+                    className="hidden md:inline-flex shrink-0 p-2.5 rounded-full border border-gray-200 bg-white shadow-md hover:bg-gray-50"
+                    aria-label="Scroll best sellers right"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {featuredProducts.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-3xl font-semibold text-[#0a1833]">
+                    Featured
+                  </h2>
+                  <Link
+                    href="/rings"
+                    className="text-sm font-medium text-[#0a1833] underline"
+                  >
+                    View all
+                  </Link>
+                </div>
+                <div className="flex items-center gap-2 md:gap-3">
+                  <button
+                    type="button"
+                    onClick={() => scrollSlider(featuredSliderRef, -1)}
+                    className="hidden md:inline-flex shrink-0 p-2.5 rounded-full border border-gray-200 bg-white shadow-md hover:bg-gray-50"
+                    aria-label="Scroll featured left"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <div className="relative flex-1 overflow-hidden">
+                    <div className="absolute inset-y-0 left-0 w-10 z-[5] bg-linear-to-r from-[#f7f5f2] to-transparent pointer-events-none" />
+                    <div className="absolute inset-y-0 right-0 w-10 z-[5] bg-linear-to-l from-[#f7f5f2] to-transparent pointer-events-none" />
+                    <div
+                      ref={featuredSliderRef}
+                      className="grid grid-flow-col auto-cols-[calc((100%_-_10px)/2)] md:auto-cols-[calc((100%_-_48px)/4)] gap-[10px] md:gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2"
+                      style={{ scrollbarWidth: "none" }}
+                    >
+                      {featuredProducts.map((product) => (
+                        <button
+                          key={`ft-${product.id}`}
+                          data-slider-card="true"
+                          onClick={() => router.push(`/product/${product.handle}`)}
+                          className="snap-start text-left bg-white rounded-2xl border border-[#ece7df] shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)] transition overflow-hidden"
+                        >
+                          <div className="relative aspect-[4/5] bg-gray-100">
+                            {product.image ? (
+                              <Image
+                                src={product.image}
+                                alt={product.imageAlt}
+                                fill
+                                sizes="(max-width: 768px) 50vw, 25vw"
+                                className="object-cover"
+                              />
+                            ) : null}
+                          </div>
+                          <div className="p-4">
+                            {/* <p className="text-xs font-medium text-purple-700 mb-1">
+                              Featured
+                            </p> */}
+                            <h3 className="text-sm md:text-base font-medium text-[#0a1833] line-clamp-2">
+                              {product.title}
+                            </h3>
+                            <p className="text-sm font-semibold text-[#0a1833] mt-1">
+                              Starting {formatIndianCurrency(getCollectionMatchedPrice(product), false)}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => scrollSlider(featuredSliderRef, 1)}
+                    className="hidden md:inline-flex shrink-0 p-2.5 rounded-full border border-gray-200 bg-white shadow-md hover:bg-gray-50"
+                    aria-label="Scroll featured right"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       
 

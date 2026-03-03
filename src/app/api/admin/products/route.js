@@ -90,6 +90,8 @@ export async function GET(request) {
           handle,
           title,
           featured_image_url,
+          is_bestseller,
+          is_featured,
           created_at,
           variants:product_variants(id),
           options:product_options(id)
@@ -132,6 +134,8 @@ export async function GET(request) {
       handle: p.handle,
       title: p.title,
       featured_image_url: p.featured_image_url,
+      is_bestseller: p.is_bestseller ?? false,
+      is_featured: p.is_featured ?? false,
       created_at: p.created_at,
       variant_count: (p.variants || []).length,
       option_count: (p.options || []).length,
@@ -198,6 +202,8 @@ export async function POST(request) {
         description_html: product.description_html || null,
         featured_image_url: product.featured_image_url || null,
         featured_image_alt: product.featured_image_alt || product.title,
+        is_bestseller: product.is_bestseller ?? false,
+        is_featured: product.is_featured ?? false,
       })
       .select()
       .single();
@@ -367,6 +373,10 @@ export async function PUT(request) {
       updates.featured_image_url = product.featured_image_url;
     if (product.featured_image_alt !== undefined)
       updates.featured_image_alt = product.featured_image_alt;
+    if (product.is_bestseller !== undefined)
+      updates.is_bestseller = !!product.is_bestseller;
+    if (product.is_featured !== undefined)
+      updates.is_featured = !!product.is_featured;
 
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date().toISOString();

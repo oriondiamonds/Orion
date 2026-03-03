@@ -59,10 +59,11 @@ export default function RootLayout({ children }) {
           href="https://wa.me/917022253092?text=Hi%20there!%20I%20need%20some%20help%20with%20a%20product%20on%20your%20website."
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-4 md:bottom-6 right-4 flex items-center justify-center gap-1 bg-[#064f46] text-white px-4 py-2 md:px-5 md:py-3 lg:px-5 lg:py-3 rounded-full text-lg font-semibold shadow-lg hover:bg-green-600 hover:scale-105 transition-all duration-300"
+          aria-label="Let us help you out on WhatsApp"
+          className="group fixed bottom-4 md:bottom-6 right-4 z-30 flex items-center justify-center bg-[#064f46] text-white px-3 py-3 rounded-full text-lg font-semibold shadow-lg hover:bg-green-600 transition-all duration-300"
         >
-          <FaWhatsapp className=" w-4 h-4 md:w-5 md:h-5 lg:w-5 lg:h-5" />
-          <span className="text-base md:text-lg lg:text-lg">
+          <FaWhatsapp className="w-5 h-5 md:w-5 md:h-5" />
+          <span className="max-w-0 overflow-hidden whitespace-nowrap text-base transition-all duration-300 group-hover:max-w-[220px] group-hover:ml-2">
             Let us help you out
           </span>
         </a>

@@ -15,6 +15,8 @@ export function transformProductData(product) {
           altText: product.featured_image_alt || product.title,
         }
       : null,
+    isBestseller: product.is_bestseller ?? false,
+    isFeatured: product.is_featured ?? false,
     images: {
       edges: (product.images || [])
         .sort((a, b) => a.position - b.position)
@@ -77,6 +79,20 @@ export function transformCollectionData(collection) {
         edges: productEdges,
       },
     },
+  };
+}
+
+export function transformCuratedProduct(product) {
+  return {
+    id: product.id,
+    handle: product.handle,
+    title: product.title,
+    image: product.featured_image_url || "",
+    imageAlt: product.featured_image_alt || product.title,
+    is_bestseller: product.is_bestseller ?? false,
+    is_featured: product.is_featured ?? false,
+    price: product.variants?.[0]?.price_amount ?? 0,
+    currency: product.variants?.[0]?.price_currency_code || "INR",
   };
 }
 
