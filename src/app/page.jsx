@@ -287,7 +287,7 @@ export default function Landing() {
       
 
       {/* Collections Section */}
-      <section id="collections" className="py-16 px-6 md:px-16 lg:px-24">
+      <section id="collections" className="py-8 md:py-16 px-6 md:px-16 lg:px-24">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-semibold mb-8 text-[#0a1833]">
             Collections
@@ -329,7 +329,7 @@ export default function Landing() {
       </section>
 
       {/* Customizations */}
-      <section id="customizations" className="py-16 px-6 md:px-16 lg:px-24">
+      <section id="customizations" className="py-8 md:py-16 px-6 md:px-16 lg:px-24">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-semibold mb-8 text-[#0a1833]">
             Customization - Bring your vision to life with us
@@ -487,7 +487,7 @@ export default function Landing() {
 
 
       {(bestSellers.length > 0 || featuredProducts.length > 0) && (
-        <section className="py-16 px-6 md:px-16 lg:px-24 bg-[#f7f5f2]">
+        <section className="py-8 md:py-16 px-6 md:px-16 lg:px-24 bg-[#f7f5f2]">
           <div className="max-w-7xl mx-auto space-y-12">
             {bestSellers.length > 0 && (
               <div>
