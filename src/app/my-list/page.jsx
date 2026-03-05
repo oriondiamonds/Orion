@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Heart, ShoppingCart, Trash2 } from "lucide-react";
-import { proxySrc } from "../../utils/imgSrc";
 import toast from "react-hot-toast";
 import {
   syncWishlistToServer,
@@ -190,7 +189,7 @@ export default function WishlistPage() {
               {/* Product Image */}
               <div className="relative group">
                 <img
-                  src={proxySrc(item.image, 640)}
+                  src={item.image}
                   alt={item.title}
                   onClick={() => goToProduct(item.handle)}
                   className="w-full h-64 object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"

@@ -44,17 +44,6 @@ const nextConfig = {
     pagesBufferLength: 5,
   },
 
-  // Proxy /supabase-proxy/* → Supabase (fixes Indian ISP DNS blocking)
-  // async rewrites() {
-  //   return [
-  //     {
-  //       source: "/supabase-proxy/:path*",
-  //       destination:
-  //         "https://ngjrleoelyckzdtrbkqb.supabase.co/:path*",
-  //     },
-  //   ];
-  // },
-
   experimental: {
     // Optimize package imports for better bundle size
     optimizePackageImports: [

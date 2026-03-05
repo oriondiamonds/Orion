@@ -25,7 +25,6 @@ import ProductAccordion from "../../../components/accordian";
 import RelatedProducts from "../../../components/RelatedProducts";
 import toast from "react-hot-toast";
 import { formatINR } from "../../../utils/formatIndianCurrency";
-import { proxySrc } from "../../../utils/imgSrc";
 import { useSession } from "next-auth/react";
 import { syncCartToServer } from "../../../utils/cartSync";
 import { markCartLocallyModified } from "../../../utils/cartCleanup";
@@ -707,12 +706,11 @@ export default function ProductDetails() {
             >
               {/* Fade-in image */}
               <img
-                src={proxySrc(
+                src={
                   selectedImage ||
                   selectedVariant?.image?.url ||
-                  product.featuredImage?.url,
-                  1200
-                )}
+                  product.featuredImage?.url
+                }
                 alt={product.title}
                 width={600}
                 height={600}
@@ -770,7 +768,7 @@ export default function ProductDetails() {
                   }`}
                 >
                   <img
-                    src={proxySrc(node.url, 160)}
+                    src={node.url}
                     alt={node.altText || product.title}
                     width={80}
                     height={80}
@@ -1205,12 +1203,11 @@ export default function ProductDetails() {
           )}
 
           <img
-            src={proxySrc(
+            src={
               selectedImage ||
               selectedVariant?.image?.url ||
-              product.featuredImage?.url,
-              1920
-            )}
+              product.featuredImage?.url
+            }
             alt={product.title}
             className="h-[90vh] max-w-[90vw] object-contain p-4 rounded-lg"
           />
