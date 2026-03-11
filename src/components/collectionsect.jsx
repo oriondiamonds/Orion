@@ -61,6 +61,7 @@ export default function CollectionSection({ id, title, items = [] }) {
   const [showFilters, setShowFilters] = useState(false);
   const [wishlistedHandles, setWishlistedHandles] = useState(new Set());
   const [cartLoadingId, setCartLoadingId] = useState(null);
+  const [livePrices, setLivePrices] = useState({});
   const searchParams = useSearchParams();
   const initialPage = Number(searchParams.get("page")) || 1;
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -81,6 +82,88 @@ export default function CollectionSection({ id, title, items = [] }) {
     return () => window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
   }, []);
 
+  // Compute live prices for all collection products, cached for 1 hour in localStorage
+  useEffect(() => {
+    if (!items.length) return;
+
+    const CACHE_KEY = "orion_live_prices_v1";
+    const TTL = 10 * 60 * 1000; // 10 minutes
+
+    async function computeLivePrices() {
+      // Use cached prices if still fresh
+      try {
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+        if (cached && Date.now() - cached.timestamp < TTL) {
+          setLivePrices(cached.prices);
+          return;
+        }
+      } catch {}
+
+      // Fetch current gold price once
+      let gold24Price = 8500;
+      try {
+        const res = await fetch("/api/gold-price");
+        const data = await res.json();
+        if (data.success && data.price) gold24Price = data.price;
+      } catch {}
+
+      // Compute karats to cover across all items
+      const allKarats = new Set();
+      items.forEach((item) =>
+        (item.allVariants || []).forEach((v) => {
+          const k = (v.selectedOptions || []).find((o) => o.name === "Gold Karat");
+          if (k) allKarats.add(k.value);
+        })
+      );
+      const karats = allKarats.size ? [...allKarats] : ["10K", "14K", "18K"];
+
+      // Fetch pricing data for all items in parallel
+      const results = await Promise.all(
+        items.map(async (item) => {
+          try {
+            const productData = await getProductByHandle(item.handle);
+            const pricing = productData?.product?.pricing || null;
+            const descriptionHtml = productData?.product?.descriptionHtml || null;
+            const prices = {};
+
+            for (const karat of karats) {
+              const karatNum = parseInt(karat);
+              if (pricing?.diamond_price && pricing[`weight_${karatNum}k`]) {
+                // Mode 2: inline with pre-fetched gold price (avoids N extra API calls)
+                const weightK = Number(pricing[`weight_${karatNum}k`]);
+                const diamondPrice = Math.round(Number(pricing.diamond_price));
+                const rawGoldPrice = gold24Price * (karatNum / 24) * weightK;
+                const makingRate = weightK >= 2 ? weightK * 700 : weightK * 950;
+                const making = makingRate * 1.75;
+                const subtotal = Math.round(diamondPrice + rawGoldPrice + making);
+                const gst = Math.round(subtotal * 0.03);
+                prices[`${item.handle}_${karat}`] = subtotal + gst;
+              } else {
+                // Mode 3 fallback (HTML parsing)
+                const result = await computeItemPrice(pricing, descriptionHtml, karat);
+                if (result?.totalPrice) prices[`${item.handle}_${karat}`] = result.totalPrice;
+              }
+            }
+
+            return prices;
+          } catch {
+            return {};
+          }
+        })
+      );
+
+      const allPrices = Object.assign({}, ...results);
+
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), prices: allPrices }));
+      } catch {}
+
+      setLivePrices(allPrices);
+    }
+
+    computeLivePrices();
+  }, [items]);
+
   // Extract unique gold karat values from all product variants
   const availableKarats = (() => {
     const karats = new Set();
@@ -95,12 +178,20 @@ export default function CollectionSection({ id, title, items = [] }) {
     return [...karats].sort((a, b) => parseInt(a) - parseInt(b));
   })();
 
-  // Get the effective price for an item based on selected karat
+  // Get the effective price for an item — live price preferred, stored price as fallback
   const getItemPrice = (item) => {
-    if (karatFilter !== "all" && item.prices?.[karatFilter]) {
-      return item.prices[karatFilter];
+    const tryKarats = karatFilter !== "all" ? [karatFilter] : ["18K", "14K", "10K"];
+    for (const k of tryKarats) {
+      const live = livePrices[`${item.handle}_${k}`];
+      if (live) return live;
     }
+    if (karatFilter !== "all" && item.prices?.[karatFilter]) return item.prices[karatFilter];
     return item.price;
+  };
+
+  const isLivePriceReady = (item) => {
+    const tryKarats = karatFilter !== "all" ? [karatFilter] : ["18K", "14K", "10K"];
+    return tryKarats.some((k) => !!livePrices[`${item.handle}_${k}`]);
   };
 
   // Filter items by karat availability
@@ -526,7 +617,7 @@ export default function CollectionSection({ id, title, items = [] }) {
                         {karatFilter} Gold
                       </p>
                     )}
-                    <p className="text-lg md:text-xl font-bold text-[#0a1833]">
+                    <p className={`text-lg md:text-xl font-bold text-[#0a1833] transition-opacity duration-300 ${!isLivePriceReady(item) ? "opacity-40" : ""}`}>
                       {formatINR(getItemPrice(item))}
                     </p>
                   </div>
