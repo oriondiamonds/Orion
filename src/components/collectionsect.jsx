@@ -16,6 +16,8 @@ import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import CategoryNav from "./CategoryNav";
 import { markCartLocallyModified } from "../utils/cartCleanup";
+import { getProductByHandle } from "../queries/products";
+import { calculateFinalPrice } from "../utils/price";
 
 // Products that require size selection — navigate to PDP instead of quick-add
 function needsSize(handle) {
@@ -58,6 +60,7 @@ export default function CollectionSection({ id, title, items = [] }) {
   const [karatFilter, setKaratFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [wishlistedHandles, setWishlistedHandles] = useState(new Set());
+  const [cartLoadingId, setCartLoadingId] = useState(null);
   const searchParams = useSearchParams();
   const initialPage = Number(searchParams.get("page")) || 1;
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -199,8 +202,8 @@ export default function CollectionSection({ id, title, items = [] }) {
     return `/product/${handle}?karat=${karat}`;
   };
 
-  // Quick add to cart — skips size-required products (navigates instead)
-  const handleQuickAddToCart = (e, item) => {
+  // Quick add to cart — computes live price before saving, skips size-required products
+  const handleQuickAddToCart = async (e, item) => {
     e.stopPropagation();
 
     if (needsSize(item.handle)) {
@@ -214,19 +217,65 @@ export default function CollectionSection({ id, title, items = [] }) {
       return;
     }
 
-    const price = getItemPrice(item);
+    setCartLoadingId(item.handle);
+
+    let calculatedPrice = parseFloat(getItemPrice(item));
+    let priceBreakdown = null;
+
+    try {
+      const productData = await getProductByHandle(item.handle);
+      const descriptionHtml = productData?.product?.descriptionHtml;
+
+      if (descriptionHtml) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(descriptionHtml, "text/html");
+        const liElements = doc.querySelectorAll(".product-description ul li");
+        const specMap = {};
+        liElements.forEach((li) => {
+          const key = li.querySelector("strong")?.textContent.replace(":", "").trim();
+          const value = li.textContent
+            .replace(li.querySelector("strong")?.textContent || "", "")
+            .trim();
+          if (key && value) specMap[key] = value;
+        });
+
+        const shapes = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
+        const weights = specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
+        const counts = specMap["Total Diamonds"]?.split(",").map((v) => v.trim()) || [];
+        const diamonds = shapes.map((shape, i) => ({
+          shape,
+          weight: parseFloat(weights[i]) || 0,
+          count: parseInt(counts[i]) || 0,
+        }));
+
+        const selectedKarat =
+          variant.selectedOptions?.find((o) => o.name === "Gold Karat")?.value || "18K";
+        const goldWeightKey = Object.keys(specMap).find((k) =>
+          k.toLowerCase().includes(selectedKarat.toLowerCase())
+        );
+        const goldWeight = parseFloat(specMap[goldWeightKey]) || 0;
+
+        const result = await calculateFinalPrice({ diamonds, goldWeight, goldKarat: selectedKarat });
+        calculatedPrice = result.totalPrice;
+        priceBreakdown = result;
+      }
+    } catch (err) {
+      console.error("Price calculation failed for quick-add, using stored price:", err);
+      // cart-load fix in my-cart/page.jsx will correct it as fallback
+    }
+
     const newItem = {
       variantId: variant.id,
       handle: item.handle,
       title: item.name,
       variantTitle: variant.title || "",
       image: item.image,
-      price: parseFloat(price),
-      calculatedPrice: parseFloat(price),
+      price: calculatedPrice,
+      calculatedPrice,
       currencyCode: "INR",
       quantity: 1,
       selectedOptions: variant.selectedOptions || [],
-      priceBreakdown: null,
+      priceBreakdown,
     };
 
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -240,6 +289,7 @@ export default function CollectionSection({ id, title, items = [] }) {
     markCartLocallyModified();
     window.dispatchEvent(new Event("cartUpdated"));
     toast.success(`${item.name} added to cart!`);
+    setCartLoadingId(null);
   };
 
   // Quick toggle wishlist
@@ -468,7 +518,8 @@ export default function CollectionSection({ id, title, items = [] }) {
 
                     <button
                       onClick={(e) => handleQuickAddToCart(e, item)}
-                      className="flex-1 bg-[#0a1833] text-white py-2 md:py-2.5 px-2 md:px-3 rounded-lg md:rounded-xl font-medium text-xs flex items-center justify-center gap-1.5 hover:bg-black transition-all duration-300 shadow-lg"
+                      disabled={cartLoadingId === item.handle}
+                      className="flex-1 bg-[#0a1833] text-white py-2 md:py-2.5 px-2 md:px-3 rounded-lg md:rounded-xl font-medium text-xs flex items-center justify-center gap-1.5 hover:bg-black transition-all duration-300 shadow-lg disabled:opacity-60"
                       title={
                         needsSize(item.handle)
                           ? "Select size on product page"
@@ -477,7 +528,11 @@ export default function CollectionSection({ id, title, items = [] }) {
                     >
                       <ShoppingCart className="w-3.5 h-3.5" />
                       <span className="hidden md:inline">
-                        {needsSize(item.handle) ? "Select" : "Add"}
+                        {cartLoadingId === item.handle
+                          ? "..."
+                          : needsSize(item.handle)
+                          ? "Select"
+                          : "Add"}
                       </span>
                     </button>
                   </div>

@@ -101,6 +101,11 @@ export default function ProductDetails() {
       return;
     }
 
+    if (!priceBreakdown || !totalPrice) {
+      toast.error("Price is still loading, please wait a moment");
+      return;
+    }
+
     // ----- VALIDATIONS -----
     if (
       (handle?.toLowerCase().endsWith("-ring") ||
@@ -219,6 +224,11 @@ export default function ProductDetails() {
   const buyNow = () => {
     if (!selectedVariant) {
       toast.error("Please select a variant");
+      return;
+    }
+
+    if (!priceBreakdown || !totalPrice) {
+      toast.error("Price is still loading, please wait a moment");
       return;
     }
 
@@ -1010,17 +1020,19 @@ export default function ProductDetails() {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={addToCart}
-                className="flex-1 cursor-pointer bg-black text-white py-3 rounded-full flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
+                disabled={!priceBreakdown}
+                className="flex-1 cursor-pointer bg-black text-white py-3 rounded-full flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShoppingCart size={20} />
-                Add to Cart
+                {priceBreakdown ? "Add to Cart" : "Calculating..."}
               </button>
               <button
                 onClick={buyNow}
-                className="flex-1 cursor-pointer bg-[#0a1833] text-white py-3 rounded-full flex items-center justify-center gap-2 hover:bg-[#0a1833]/90 transition-colors"
+                disabled={!priceBreakdown}
+                className="flex-1 cursor-pointer bg-[#0a1833] text-white py-3 rounded-full flex items-center justify-center gap-2 hover:bg-[#0a1833]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Zap size={20} />
-                Buy Now
+                {priceBreakdown ? "Buy Now" : "Calculating..."}
               </button>
 
               {/* Wishlist Button */}
