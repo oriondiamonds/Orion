@@ -7,8 +7,9 @@ import Image from "next/image";
 import OurPromise from "../components/promise";
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { getBestSellers, getFeaturedProducts } from "../queries/products";
+import { getBestSellers, getFeaturedProducts, getProductByHandle } from "../queries/products";
 import { formatIndianCurrency } from "../utils/formatIndianCurrency";
+import { computeItemPrice } from "../utils/computeItemPrice";
 import { getSheetPricing } from "../utils/sheetPricing";
 
 export default function Landing() {
@@ -21,6 +22,7 @@ export default function Landing() {
   const [open, setOpen] = useState(false);
   const [bestSellers, setBestSellers] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [livePrices, setLivePrices] = useState({});
   const [sheetPricing, setSheetPricing] = useState({});
   const bestSellersSliderRef = useRef(null);
   const featuredSliderRef = useRef(null);
@@ -113,16 +115,69 @@ export default function Landing() {
     let mounted = true;
 
     async function loadCuratedProducts() {
-      const [bestsellerData, featuredData] = await Promise.all([
+      const [bestsellerData, featuredData, pricingMap] = await Promise.all([
         getBestSellers(8),
         getFeaturedProducts(8),
+        getSheetPricing(),
       ]);
-      const pricingMap = await getSheetPricing();
 
       if (!mounted) return;
       setBestSellers(bestsellerData);
       setFeaturedProducts(featuredData);
       setSheetPricing(pricingMap || {});
+
+      // Live price computation — shared cache with collection pages
+      const CACHE_KEY = "orion_live_prices_v1";
+      const TTL = 10 * 60 * 1000; // 10 minutes
+
+      let cached = null;
+      try { cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch {}
+
+      const allProducts = [...bestsellerData, ...featuredData];
+      const needsFetch = allProducts.filter(
+        (p) => !cached || Date.now() - cached.timestamp >= TTL || !cached.prices?.[`${p.handle}_10K`] || !cached.prices?.[`${p.handle}_14K`] || !cached.prices?.[`${p.handle}_18K`]
+      );
+
+      let prices = { ...(cached?.prices || {}) };
+
+      if (needsFetch.length > 0) {
+        let gold24Price = 8500;
+        try {
+          const r = await fetch("/api/gold-price");
+          const d = await r.json();
+          if (d.success && d.price) gold24Price = d.price;
+        } catch {}
+
+        await Promise.all(
+          needsFetch.map(async (product) => {
+            try {
+              const pd = await getProductByHandle(product.handle);
+              const pricing = pd?.product?.pricing || null;
+              const descriptionHtml = pd?.product?.descriptionHtml || null;
+              for (const karatNum of [10, 14, 18]) {
+                const karat = `${karatNum}K`;
+                if (pricing?.diamond_price && pricing[`weight_${karatNum}k`]) {
+                  const w = Number(pricing[`weight_${karatNum}k`]);
+                  const dp = Math.round(Number(pricing.diamond_price));
+                  const raw = gold24Price * (karatNum / 24) * w;
+                  const making = (w >= 2 ? w * 700 : w * 950) * 1.75;
+                  const sub = Math.round(dp + raw + making);
+                  prices[`${product.handle}_${karat}`] = sub + Math.round(sub * 0.03);
+                } else {
+                  const result = await computeItemPrice(pricing, descriptionHtml, karat);
+                  if (result?.totalPrice) prices[`${product.handle}_${karat}`] = result.totalPrice;
+                }
+              }
+            } catch {}
+          })
+        );
+
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), prices }));
+        } catch {}
+      }
+
+      if (mounted) setLivePrices(prices);
     }
 
     loadCuratedProducts();
@@ -133,9 +188,15 @@ export default function Landing() {
   }, []);
 
   const getCollectionMatchedPrice = (product) => {
-    const byHandle = sheetPricing?.[product.handle];
-    return byHandle?.price10K || product.price || 0;
+    return (
+      livePrices[`${product.handle}_10K`] ||
+      sheetPricing?.[product.handle]?.price10K ||
+      product.price ||
+      0
+    );
   };
+
+  const isHomeLivePriceReady = (product) => !!livePrices[`${product.handle}_10K`];
 
   const scrollSlider = (ref, direction) => {
     const slider = ref.current;
@@ -544,7 +605,7 @@ export default function Landing() {
                             <h3 className="text-sm md:text-base font-medium text-[#0a1833] line-clamp-2">
                               {product.title}
                             </h3>
-                            <p className="text-sm font-semibold text-[#0a1833] mt-1">
+                            <p className={`text-sm font-semibold text-[#0a1833] mt-1 transition-opacity duration-300 ${!isHomeLivePriceReady(product) ? "opacity-40" : ""}`}>
                               Starting {formatIndianCurrency(getCollectionMatchedPrice(product), false)}
                             </p>
                           </div>
@@ -619,7 +680,7 @@ export default function Landing() {
                             <h3 className="text-sm md:text-base font-medium text-[#0a1833] line-clamp-2">
                               {product.title}
                             </h3>
-                            <p className="text-sm font-semibold text-[#0a1833] mt-1">
+                            <p className={`text-sm font-semibold text-[#0a1833] mt-1 transition-opacity duration-300 ${!isHomeLivePriceReady(product) ? "opacity-40" : ""}`}>
                               Starting {formatIndianCurrency(getCollectionMatchedPrice(product), false)}
                             </p>
                           </div>
