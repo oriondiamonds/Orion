@@ -180,7 +180,7 @@ export default function CollectionSection({ id, title, items = [] }) {
 
   // Get the effective price for an item — live price preferred, stored price as fallback
   const getItemPrice = (item) => {
-    const tryKarats = karatFilter !== "all" ? [karatFilter] : ["18K", "14K", "10K"];
+    const tryKarats = karatFilter !== "all" ? [karatFilter] : ["10K", "14K", "18K"];
     for (const k of tryKarats) {
       const live = livePrices[`${item.handle}_${k}`];
       if (live) return live;
@@ -190,7 +190,7 @@ export default function CollectionSection({ id, title, items = [] }) {
   };
 
   const isLivePriceReady = (item) => {
-    const tryKarats = karatFilter !== "all" ? [karatFilter] : ["18K", "14K", "10K"];
+    const tryKarats = karatFilter !== "all" ? [karatFilter] : ["10K", "14K", "18K"];
     return tryKarats.some((k) => !!livePrices[`${item.handle}_${k}`]);
   };
 
