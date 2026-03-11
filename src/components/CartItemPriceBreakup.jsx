@@ -72,6 +72,18 @@ export default function CartItemPriceBreakup({ item, appliedCoupon, cartSubtotal
         });
 
         setPriceData(result);
+
+        // Persist computed breakdown back to cart so coupon validation has the data
+        if (typeof window !== "undefined") {
+          const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+          const updated = cart.map((ci) =>
+            ci.variantId === item.variantId
+              ? { ...ci, calculatedPrice: result.totalPrice, price: result.totalPrice, priceBreakdown: result }
+              : ci
+          );
+          localStorage.setItem("cart", JSON.stringify(updated));
+          window.dispatchEvent(new Event("cartUpdated"));
+        }
       } catch (error) {
         console.error("Error calculating price:", error);
       } finally {

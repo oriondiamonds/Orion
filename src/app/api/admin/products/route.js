@@ -81,23 +81,51 @@ export async function GET(request) {
     }
 
     // Default: list all products (lightweight)
-    const [productsRes, pricingRes, collectionsRes, cpRes] = await Promise.all([
-      supabaseAdmin
-        .from("products")
-        .select(
-          `
-          id,
-          handle,
-          title,
-          featured_image_url,
-          is_bestseller,
-          is_featured,
-          created_at,
-          variants:product_variants(id),
-          options:product_options(id)
+    let productsRes = await supabaseAdmin
+      .from("products")
+      .select(
         `
-        )
-        .order("created_at", { ascending: false }),
+        id,
+        handle,
+        title,
+        featured_image_url,
+        is_bestseller,
+        is_featured,
+        created_at,
+        variants:product_variants(id),
+        options:product_options(id)
+      `
+      )
+      .order("created_at", { ascending: false });
+
+    // Backward-compatible fallback for DBs that don't yet have flag columns
+    if (productsRes.error) {
+      const msg = String(productsRes.error.message || "").toLowerCase();
+      const missingFlags =
+        msg.includes("is_bestseller") || msg.includes("is_featured");
+
+      if (missingFlags) {
+        console.warn(
+          "Products flag columns missing in DB. Falling back to legacy select."
+        );
+        productsRes = await supabaseAdmin
+          .from("products")
+          .select(
+            `
+            id,
+            handle,
+            title,
+            featured_image_url,
+            created_at,
+            variants:product_variants(id),
+            options:product_options(id)
+          `
+          )
+          .order("created_at", { ascending: false });
+      }
+    }
+
+    const [pricingRes, collectionsRes, cpRes] = await Promise.all([
       supabaseAdmin.from("product_prices").select("handle"),
       supabaseAdmin
         .from("collections")
