@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ShoppingCart, Trash2, Plus, Minus, Tag, X } from "lucide-react";
 import { getProductByHandle } from "../../queries/products";
-import { calculateFinalPrice } from "../../utils/price";
+import { computeItemPrice } from "../../utils/computeItemPrice";
 import toast from "react-hot-toast";
 import CartItemPriceBreakup from "../../components/CartItemPriceBreakup";
 import {
@@ -70,7 +70,7 @@ export default function CartPage() {
 
       // For items missing priceBreakdown, compute it now so coupon validation works
       const itemsNeedingBreakdown = enrichedItems.filter(
-        (item) => !item.priceBreakdown && item.descriptionHtml
+        (item) => !item.priceBreakdown
       );
 
       let finalItems = enrichedItems;
@@ -81,36 +81,20 @@ export default function CartPage() {
         await Promise.all(
           itemsNeedingBreakdown.map(async (item) => {
             try {
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(item.descriptionHtml, "text/html");
-              const liElements = doc.querySelectorAll(".product-description ul li");
-              const specMap = {};
-              liElements.forEach((li) => {
-                const key = li.querySelector("strong")?.textContent.replace(":", "").trim();
-                const value = li.textContent
-                  .replace(li.querySelector("strong")?.textContent || "", "")
-                  .trim();
-                if (key && value) specMap[key] = value;
-              });
-
-              const shapes = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
-              const weights = specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
-              const counts = specMap["Total Diamonds"]?.split(",").map((v) => v.trim()) || [];
-              const diamonds = shapes.map((shape, i) => ({
-                shape,
-                weight: parseFloat(weights[i]) || 0,
-                count: parseInt(counts[i]) || 0,
-              }));
+              // Fetch pricing data (for Mode 1/2 support with per-karat weights)
+              let pricing = item.pricing || null;
+              let descriptionHtml = item.descriptionHtml || null;
+              if (!pricing && item.handle) {
+                const productData = await getProductByHandle(item.handle);
+                pricing = productData?.product?.pricing || null;
+                descriptionHtml = descriptionHtml || productData?.product?.descriptionHtml || null;
+              }
 
               const selectedKarat =
                 item.selectedOptions?.find((opt) => opt.name === "Gold Karat")?.value || "18K";
-              const goldWeightKey = Object.keys(specMap).find((k) =>
-                k.toLowerCase().includes(selectedKarat.toLowerCase())
-              );
-              const goldWeight = parseFloat(specMap[goldWeightKey]) || 0;
 
-              const result = await calculateFinalPrice({ diamonds, goldWeight, goldKarat: selectedKarat });
-              computedMap.set(item.variantId, result);
+              const result = await computeItemPrice(pricing, descriptionHtml, selectedKarat);
+              if (result) computedMap.set(item.variantId, result);
             } catch (err) {
               console.error("Error computing priceBreakdown for cart item:", err);
             }

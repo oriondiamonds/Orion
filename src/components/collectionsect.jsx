@@ -17,7 +17,7 @@ import toast from "react-hot-toast";
 import CategoryNav from "./CategoryNav";
 import { markCartLocallyModified } from "../utils/cartCleanup";
 import { getProductByHandle } from "../queries/products";
-import { calculateFinalPrice } from "../utils/price";
+import { computeItemPrice } from "../utils/computeItemPrice";
 
 // Products that require size selection — navigate to PDP instead of quick-add
 function needsSize(handle) {
@@ -224,38 +224,13 @@ export default function CollectionSection({ id, title, items = [] }) {
 
     try {
       const productData = await getProductByHandle(item.handle);
-      const descriptionHtml = productData?.product?.descriptionHtml;
+      const pricing = productData?.product?.pricing || null;
+      const descriptionHtml = productData?.product?.descriptionHtml || null;
+      const selectedKarat =
+        variant.selectedOptions?.find((o) => o.name === "Gold Karat")?.value || "18K";
 
-      if (descriptionHtml) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(descriptionHtml, "text/html");
-        const liElements = doc.querySelectorAll(".product-description ul li");
-        const specMap = {};
-        liElements.forEach((li) => {
-          const key = li.querySelector("strong")?.textContent.replace(":", "").trim();
-          const value = li.textContent
-            .replace(li.querySelector("strong")?.textContent || "", "")
-            .trim();
-          if (key && value) specMap[key] = value;
-        });
-
-        const shapes = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
-        const weights = specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
-        const counts = specMap["Total Diamonds"]?.split(",").map((v) => v.trim()) || [];
-        const diamonds = shapes.map((shape, i) => ({
-          shape,
-          weight: parseFloat(weights[i]) || 0,
-          count: parseInt(counts[i]) || 0,
-        }));
-
-        const selectedKarat =
-          variant.selectedOptions?.find((o) => o.name === "Gold Karat")?.value || "18K";
-        const goldWeightKey = Object.keys(specMap).find((k) =>
-          k.toLowerCase().includes(selectedKarat.toLowerCase())
-        );
-        const goldWeight = parseFloat(specMap[goldWeightKey]) || 0;
-
-        const result = await calculateFinalPrice({ diamonds, goldWeight, goldKarat: selectedKarat });
+      const result = await computeItemPrice(pricing, descriptionHtml, selectedKarat);
+      if (result) {
         calculatedPrice = result.totalPrice;
         priceBreakdown = result;
       }
