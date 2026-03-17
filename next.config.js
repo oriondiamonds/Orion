@@ -21,8 +21,8 @@ const nextConfig = {
       },
     ],
 
-    // Cache optimized images for 1 year
-    minimumCacheTTL: 31536000,
+    // Cache optimized images for 1 day
+    minimumCacheTTL: 86400,
 
     // Device sizes for responsive images
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
