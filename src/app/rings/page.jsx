@@ -4,7 +4,7 @@ import { getRingsCollection } from "../../queries/collections";
 import { getSheetPricing } from "../../utils/sheetPricing";
 
 // Cache for 1 hour
-export const revalidate = 3600;
+export const revalidate = 60;
 
 function extractDiamondDetails(description) {
   const caratMatch = description.match(/Total Diamond Carat:\s*([\d.]+)/);
