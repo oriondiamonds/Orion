@@ -90,21 +90,16 @@ export default function CollectionSection({ id, title, items = [] }) {
     const TTL = 10 * 60 * 1000; // 10 minutes
 
     async function computeLivePrices() {
-      // Use cached prices if still fresh
+      let existingPrices = {};
+      let cacheStale = true;
+
+      // Load cache — even if fresh, check for items missing from it
       try {
         const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-        if (cached && Date.now() - cached.timestamp < TTL) {
-          setLivePrices(cached.prices);
-          return;
+        if (cached) {
+          existingPrices = cached.prices || {};
+          cacheStale = Date.now() - cached.timestamp >= TTL;
         }
-      } catch {}
-
-      // Fetch current gold price once
-      let gold24Price = 8500;
-      try {
-        const res = await fetch("/api/gold-price");
-        const data = await res.json();
-        if (data.success && data.price) gold24Price = data.price;
       } catch {}
 
       // Compute karats to cover across all items
@@ -117,9 +112,30 @@ export default function CollectionSection({ id, title, items = [] }) {
       );
       const karats = allKarats.size ? [...allKarats] : ["10K", "14K", "18K"];
 
-      // Fetch pricing data for all items in parallel
+      // Which items need (re)computation — stale cache OR missing from cache
+      const itemsToFetch = cacheStale
+        ? items
+        : items.filter((item) => karats.some((k) => !existingPrices[`${item.handle}_${k}`]));
+
+      if (itemsToFetch.length === 0) {
+        setLivePrices(existingPrices);
+        return;
+      }
+
+      // Show cached prices immediately while fetching missing ones
+      if (Object.keys(existingPrices).length > 0) setLivePrices(existingPrices);
+
+      // Fetch current gold price once
+      let gold24Price = 8500;
+      try {
+        const res = await fetch("/api/gold-price");
+        const data = await res.json();
+        if (data.success && data.price) gold24Price = data.price;
+      } catch {}
+
+      // Fetch pricing data for missing/stale items in parallel
       const results = await Promise.all(
-        items.map(async (item) => {
+        itemsToFetch.map(async (item) => {
           try {
             const productData = await getProductByHandle(item.handle);
             const pricing = productData?.product?.pricing || null;
@@ -152,10 +168,15 @@ export default function CollectionSection({ id, title, items = [] }) {
         })
       );
 
-      const allPrices = Object.assign({}, ...results);
+      const newPrices = Object.assign({}, ...results);
+      const allPrices = { ...existingPrices, ...newPrices };
 
       try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), prices: allPrices }));
+        // Only reset timestamp if we did a full refresh; preserve it for partial fills
+        const cacheEntry = cacheStale
+          ? { timestamp: Date.now(), prices: allPrices }
+          : { timestamp: JSON.parse(localStorage.getItem(CACHE_KEY) || "null")?.timestamp || Date.now(), prices: allPrices };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cacheEntry));
       } catch {}
 
       setLivePrices(allPrices);
