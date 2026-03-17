@@ -342,14 +342,16 @@ export default function ProductDetails() {
       )
     )?.node;
 
-    const colorImageMap = {
-      "White Gold": 0,
-      "Rose Gold": 4,
-      "Yellow Gold": 8,
-    };
+    // Fallback: find first product image whose URL contains the color code
+    const colorCodePattern = {
+      "Rose Gold":    /-R-/i,
+      "White Gold":   /-W-/i,
+      "Yellow Gold":  /-Y-/i,
+    }[selectedOptions["Gold Color"]];
 
-    const fallbackIndex = colorImageMap[selectedOptions["Gold Color"]];
-    const fallbackUrl = product.images?.edges?.[fallbackIndex]?.node?.url;
+    const fallbackUrl = colorCodePattern
+      ? product.images?.edges?.find(({ node }) => colorCodePattern.test(node.url))?.node?.url
+      : product.images?.edges?.[0]?.node?.url;
 
     const imageUrl = matchingVariant?.image?.url || fallbackUrl;
     if (!imageUrl) return;
