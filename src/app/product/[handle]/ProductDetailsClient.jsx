@@ -334,7 +334,13 @@ export default function ProductDetails() {
   }, [product?.id]);
 
   useEffect(() => {
-    if (!selectedOptions["Gold Color"] || !product?.images?.edges) return;
+    if (!selectedOptions["Gold Color"] || !product) return;
+
+    const matchingVariant = product.variants?.edges?.find(({ node }) =>
+      node.selectedOptions.some(
+        (opt) => opt.name === "Gold Color" && opt.value === selectedOptions["Gold Color"]
+      )
+    )?.node;
 
     const colorImageMap = {
       "White Gold": 0,
@@ -342,24 +348,26 @@ export default function ProductDetails() {
       "Yellow Gold": 8,
     };
 
-    const startIndex = colorImageMap[selectedOptions["Gold Color"]];
-    if (startIndex !== undefined && product.images.edges[startIndex]) {
-      const imageUrl = product.images.edges[startIndex].node.url;
-      setSelectedImage(imageUrl);
+    const fallbackIndex = colorImageMap[selectedOptions["Gold Color"]];
+    const fallbackUrl = product.images?.edges?.[fallbackIndex]?.node?.url;
 
-      setTimeout(() => {
-        const thumbnail = document.querySelector(
-          `button[data-image-url="${imageUrl}"]`,
-        );
-        if (thumbnail) {
-          thumbnail.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-            inline: "center",
-          });
-        }
-      }, 100);
-    }
+    const imageUrl = matchingVariant?.image?.url || fallbackUrl;
+    if (!imageUrl) return;
+
+    setSelectedImage(imageUrl);
+
+    setTimeout(() => {
+      const thumbnail = document.querySelector(
+        `button[data-image-url="${imageUrl}"]`,
+      );
+      if (thumbnail) {
+        thumbnail.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+    }, 100);
   }, [selectedOptions["Gold Color"], product]);
 
   const fetchProduct = async () => {
