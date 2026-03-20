@@ -336,51 +336,36 @@ export default function ProductDetails() {
   useEffect(() => {
     if (!selectedOptions["Gold Color"] || !product) return;
 
-    const matchingVariant = product.variants?.edges?.find(({ node }) =>
-      node.selectedOptions.some(
-        (opt) => opt.name === "Gold Color" && opt.value === selectedOptions["Gold Color"]
-      )
-    )?.node;
-
-    // Fallback: find first product image whose URL contains the color code
     const colorCodePattern = {
-      "Rose Gold":    /-R-/i,
-      "White Gold":   /-W-/i,
-      "Yellow Gold":  /-Y-/i,
+      "Rose Gold":   /-R-/i,
+      "White Gold":  /-W-/i,
+      "Yellow Gold": /-Y-/i,
     }[selectedOptions["Gold Color"]];
 
     const images = product.images?.edges || [];
 
-    // Tier 1: R/W/Y pattern match in URL
+    // Tier 1: R/W/Y pattern match in image URL (products with color-coded filenames)
     const patternMatchedUrl = colorCodePattern
       ? images.find(({ node }) => colorCodePattern.test(node.url))?.node?.url
       : null;
 
     // Tier 2: dynamic group-index fallback (3 or 4 images per color group)
-    // imagesPerGroup = floor(total / 3) → 9 imgs: 0,3,6 | 12 imgs: 0,4,8
+    // floor(total / 3) → 9 imgs: 0,3,6 | 12 imgs: 0,4,8
     const goldColorOrder = ["White Gold", "Rose Gold", "Yellow Gold"];
     const colorIndex = goldColorOrder.indexOf(selectedOptions["Gold Color"]);
     const imagesPerGroup = Math.max(1, Math.floor(images.length / 3));
     const groupStart = colorIndex >= 0 ? colorIndex * imagesPerGroup : 0;
     const indexFallbackUrl = (images[groupStart] || images[0])?.node?.url;
 
-    const fallbackUrl = patternMatchedUrl || indexFallbackUrl;
-
-    const imageUrl = matchingVariant?.image?.url || fallbackUrl;
+    const imageUrl = patternMatchedUrl || indexFallbackUrl;
     if (!imageUrl) return;
 
     setSelectedImage(imageUrl);
 
     setTimeout(() => {
-      const thumbnail = document.querySelector(
-        `button[data-image-url="${imageUrl}"]`,
-      );
+      const thumbnail = document.querySelector(`button[data-image-url="${imageUrl}"]`);
       if (thumbnail) {
-        thumbnail.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-          inline: "center",
-        });
+        thumbnail.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
       }
     }, 100);
   }, [selectedOptions["Gold Color"], product]);
