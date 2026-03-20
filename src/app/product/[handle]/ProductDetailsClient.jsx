@@ -349,9 +349,22 @@ export default function ProductDetails() {
       "Yellow Gold":  /-Y-/i,
     }[selectedOptions["Gold Color"]];
 
-    const fallbackUrl = colorCodePattern
-      ? product.images?.edges?.find(({ node }) => colorCodePattern.test(node.url))?.node?.url
-      : product.images?.edges?.[0]?.node?.url;
+    const images = product.images?.edges || [];
+
+    // Tier 1: R/W/Y pattern match in URL
+    const patternMatchedUrl = colorCodePattern
+      ? images.find(({ node }) => colorCodePattern.test(node.url))?.node?.url
+      : null;
+
+    // Tier 2: dynamic group-index fallback (3 or 4 images per color group)
+    // imagesPerGroup = floor(total / 3) → 9 imgs: 0,3,6 | 12 imgs: 0,4,8
+    const goldColorOrder = ["White Gold", "Rose Gold", "Yellow Gold"];
+    const colorIndex = goldColorOrder.indexOf(selectedOptions["Gold Color"]);
+    const imagesPerGroup = Math.max(1, Math.floor(images.length / 3));
+    const groupStart = colorIndex >= 0 ? colorIndex * imagesPerGroup : 0;
+    const indexFallbackUrl = (images[groupStart] || images[0])?.node?.url;
+
+    const fallbackUrl = patternMatchedUrl || indexFallbackUrl;
 
     const imageUrl = matchingVariant?.image?.url || fallbackUrl;
     if (!imageUrl) return;
