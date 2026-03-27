@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ShoppingCart, Trash2, Plus, Minus, Tag, X } from "lucide-react";
+import { ShoppingCart, Trash2, Plus, Minus, Tag, X, Truck, PackageCheck, ShieldCheck } from "lucide-react";
 import { getProductByHandle } from "../../queries/products";
 import { computeItemPrice } from "../../utils/computeItemPrice";
 import toast from "react-hot-toast";
@@ -710,6 +710,22 @@ export default function CartPage() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Shipping Info */}
+              <div className="flex flex-col gap-2 text-xs text-gray-500 border border-gray-100 rounded-xl px-4 py-3 bg-gray-50 mb-1">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-[#0a1833] shrink-0" />
+                  <span><span className="font-medium text-gray-700">Free Shipping</span> on all orders</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <PackageCheck className="w-4 h-4 text-[#0a1833] shrink-0" />
+                  <span>Delivery in <span className="font-medium text-gray-700">15–21 days</span> at your doorstep</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#0a1833] shrink-0" />
+                  <span>Secure payment via <span className="font-medium text-gray-700">trusted gateways</span></span>
+                </div>
               </div>
 
               <button

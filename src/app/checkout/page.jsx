@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Script from "next/script";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { MapPin, ArrowLeft, Tag, X, ShoppingBag } from "lucide-react";
+import { MapPin, ArrowLeft, Tag, X, ShoppingBag, Truck, PackageCheck, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import CartItemPriceBreakup from "../../components/CartItemPriceBreakup";
 import { clearServerCart } from "../../utils/cartSync";
@@ -688,6 +688,22 @@ function CheckoutContent() {
                     />
                     {addressErrors.zip && <p className="text-red-500 text-xs mt-0.5">{addressErrors.zip}</p>}
                   </div>
+                </div>
+              </div>
+
+              {/* Shipping Info */}
+              <div className="flex flex-col gap-2 text-xs text-gray-500 border border-gray-100 rounded-xl px-4 py-3 bg-gray-50 mb-1">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-[#0a1833] shrink-0" />
+                  <span><span className="font-medium text-gray-700">Free Shipping</span> on all orders</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <PackageCheck className="w-4 h-4 text-[#0a1833] shrink-0" />
+                  <span>Delivery in <span className="font-medium text-gray-700">15–21 days</span> at your doorstep</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#0a1833] shrink-0" />
+                  <span>Secure payment via <span className="font-medium text-gray-700">trusted gateways</span></span>
                 </div>
               </div>
 
