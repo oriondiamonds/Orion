@@ -1297,45 +1297,47 @@ export default function ProductDetails() {
             </div>
 
             <form onSubmit={handleReviewSubmit} className="space-y-4">
-              {/* Star picker — click left half = .5, right half = whole */}
+              {/* Star rating — slider for precise decimal input */}
               <div>
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="text-sm text-gray-600 mb-2">
                   Rating <span className="text-red-400">*</span>
                   {reviewForm.rating > 0 && (
                     <span className="ml-2 text-[#c9a84c] font-semibold">{reviewForm.rating.toFixed(1)} / 5.0</span>
                   )}
                 </p>
-                <div className="flex gap-1">
+
+                {/* Star display */}
+                <div className="flex gap-0.5 mb-3">
                   {[1, 2, 3, 4, 5].map((star) => {
-                    const full = reviewForm.rating >= star;
-                    const half = !full && reviewForm.rating >= star - 0.5 && reviewForm.rating > star - 1;
-                    const starStyle = full
-                      ? { color: "#c9a84c" }
-                      : half
-                      ? {
-                          background: "linear-gradient(to right, #c9a84c 50%, #d1d5db 50%)",
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          backgroundClip: "text",
-                        }
-                      : { color: "#d1d5db" };
+                    const fill = Math.round(Math.min(1, Math.max(0, reviewForm.rating - (star - 1))) * 100);
                     return (
-                      <button
-                        key={star}
-                        type="button"
-                        className="relative text-3xl leading-none transition-transform hover:scale-110 w-9"
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const x = e.clientX - rect.left;
-                          const value = x < rect.width / 2 ? star - 0.5 : star;
-                          setReviewForm((p) => ({ ...p, rating: value }));
-                        }}
-                        style={starStyle}
-                      >
-                        ★
-                      </button>
+                      <span key={star} className="relative inline-block text-3xl leading-none w-8">
+                        <span style={{ color: "#d1d5db" }}>★</span>
+                        {fill > 0 && (
+                          <span
+                            className="absolute inset-0 overflow-hidden"
+                            style={{ width: `${fill}%`, color: "#c9a84c" }}
+                          >
+                            ★
+                          </span>
+                        )}
+                      </span>
                     );
                   })}
+                </div>
+
+                {/* Slider — 1.0 to 5.0, step 0.1 */}
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="0.1"
+                  value={reviewForm.rating || 1}
+                  onChange={(e) => setReviewForm((p) => ({ ...p, rating: parseFloat(e.target.value) }))}
+                  className="w-full accent-[#c9a84c]"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>1.0</span><span>2.0</span><span>3.0</span><span>4.0</span><span>5.0</span>
                 </div>
               </div>
 
