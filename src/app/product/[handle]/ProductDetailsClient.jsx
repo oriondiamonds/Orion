@@ -63,6 +63,12 @@ export default function ProductDetails() {
 
   const [engravingText, setEngravingText] = useState("");
 
+  // Reviews
+  const [reviews, setReviews] = useState([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ name: "", location: "", rating: 0, text: "" });
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
   // ============================================
   // PRICE DISPLAY HANDLER
   // ============================================
@@ -287,6 +293,14 @@ export default function ProductDetails() {
 
   useEffect(() => {
     fetchProduct();
+  }, [handle]);
+
+  useEffect(() => {
+    if (!handle) return;
+    fetch(`/api/reviews?handle=${handle}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.reviews) setReviews(d.reviews); })
+      .catch(() => {});
   }, [handle]);
 
   useEffect(() => {
@@ -534,6 +548,38 @@ export default function ProductDetails() {
           toast.error("Failed to sync wishlist to server");
         }
       }
+    }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!reviewForm.name.trim()) { toast.error("Please enter your name"); return; }
+    if (!reviewForm.text.trim()) { toast.error("Please write your review"); return; }
+    if (!reviewForm.rating) { toast.error("Please select a rating"); return; }
+    setReviewSubmitting(true);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: reviewForm.name,
+          location: reviewForm.location,
+          product_handle: handle,
+          product_title: product.title,
+          rating: reviewForm.rating,
+          text: reviewForm.text,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "Failed to submit"); return; }
+      setReviews((prev) => [data.review, ...prev].sort((a, b) => b.rating - a.rating || new Date(b.created_at) - new Date(a.created_at)));
+      setReviewForm({ name: "", location: "", rating: 0, text: "" });
+      setShowReviewModal(false);
+      toast.success("Review submitted!");
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -1177,9 +1223,164 @@ export default function ProductDetails() {
           onPriceData={handlePriceData}
         />
 
+        {/* Customer Reviews */}
+        <div className="mt-12 border-t pt-10">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-[#0a1833]">Customer Reviews</h2>
+              {reviews.length > 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  {(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)} avg · {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setShowReviewModal(true)}
+              className="text-sm bg-[#0a1833] text-white px-5 py-2 rounded-full hover:bg-[#1a2f5a] transition"
+            >
+              Write a Review
+            </button>
+          </div>
+
+          {reviews.length === 0 ? (
+            <p className="text-gray-400 text-sm">No reviews yet. Be the first to share your experience.</p>
+          ) : (
+            <div className="space-y-5 max-h-[520px] overflow-y-auto pr-2" style={{ scrollbarWidth: "thin", scrollbarColor: "#e5e7eb transparent" }}>
+              {reviews.map((r) => (
+                <div key={r.id} className="border border-gray-100 rounded-2xl p-5 bg-gray-50">
+                  {/* Stars */}
+                  <div className="flex gap-0.5 mb-2">
+                    {Array.from({ length: 5 }).map((_, s) => {
+                      const full = s + 1 <= Math.floor(r.rating);
+                      const partial = !full && s < r.rating;
+                      const fill = partial ? Math.round((r.rating - s) * 100) : 0;
+                      const style = full
+                        ? { color: "#c9a84c" }
+                        : partial
+                        ? {
+                            background: `linear-gradient(to right, #c9a84c ${fill}%, #d1d5db ${fill}%)`,
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent",
+                            backgroundClip: "text",
+                          }
+                        : { color: "#d1d5db" };
+                      return <span key={s} className="text-lg" style={style}>★</span>;
+                    })}
+                  </div>
+                  <p className="text-gray-700 text-sm leading-relaxed mb-3">&ldquo;{r.text}&rdquo;</p>
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span className="font-medium text-gray-600">{r.name}{r.location ? ` · ${r.location}` : ""}</span>
+                    <span>{new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Related Products */}
         <RelatedProducts productId={product.id} />
       </div>
+
+      {/* Review Submission Modal */}
+      {showReviewModal && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowReviewModal(false); }}
+        >
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-semibold text-[#0a1833]">Write a Review</h3>
+              <button onClick={() => setShowReviewModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleReviewSubmit} className="space-y-4">
+              {/* Star picker — click left half = .5, right half = whole */}
+              <div>
+                <p className="text-sm text-gray-600 mb-1">
+                  Rating <span className="text-red-400">*</span>
+                  {reviewForm.rating > 0 && (
+                    <span className="ml-2 text-[#c9a84c] font-semibold">{reviewForm.rating.toFixed(1)} / 5.0</span>
+                  )}
+                </p>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const full = reviewForm.rating >= star;
+                    const half = !full && reviewForm.rating >= star - 0.5 && reviewForm.rating > star - 1;
+                    const starStyle = full
+                      ? { color: "#c9a84c" }
+                      : half
+                      ? {
+                          background: "linear-gradient(to right, #c9a84c 50%, #d1d5db 50%)",
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                          backgroundClip: "text",
+                        }
+                      : { color: "#d1d5db" };
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        className="relative text-3xl leading-none transition-transform hover:scale-110 w-9"
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const x = e.clientX - rect.left;
+                          const value = x < rect.width / 2 ? star - 0.5 : star;
+                          setReviewForm((p) => ({ ...p, rating: value }));
+                        }}
+                        style={starStyle}
+                      >
+                        ★
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Name <span className="text-red-400">*</span></label>
+                <input
+                  value={reviewForm.name}
+                  onChange={(e) => setReviewForm((p) => ({ ...p, name: e.target.value }))}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0a1833]"
+                  placeholder="Your name"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Location <span className="text-gray-400">(optional)</span></label>
+                <input
+                  value={reviewForm.location}
+                  onChange={(e) => setReviewForm((p) => ({ ...p, location: e.target.value }))}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0a1833]"
+                  placeholder="City"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Review <span className="text-red-400">*</span></label>
+                <textarea
+                  value={reviewForm.text}
+                  onChange={(e) => setReviewForm((p) => ({ ...p, text: e.target.value }))}
+                  rows={4}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0a1833] resize-none"
+                  placeholder="Share your experience with this product..."
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={reviewSubmitting}
+                className="w-full bg-[#0a1833] text-white py-3 rounded-full text-sm font-semibold hover:bg-[#1a2f5a] transition disabled:opacity-50"
+              >
+                {reviewSubmitting ? "Submitting..." : "Submit Review"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Full Screen Modal */}
       {isModalOpen && (
