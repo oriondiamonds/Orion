@@ -21,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import { getProductByHandle } from "../../../queries/products";
+import { supabase } from "../../../utils/supabase.js";
 import ProductAccordion from "../../../components/accordian";
 import RelatedProducts from "../../../components/RelatedProducts";
 import toast from "react-hot-toast";
@@ -68,6 +69,9 @@ export default function ProductDetails() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewForm, setReviewForm] = useState({ name: "", location: "", rating: 0, text: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewImageFile, setReviewImageFile] = useState(null);
+  const [reviewImagePreview, setReviewImagePreview] = useState(null);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   // ============================================
   // PRICE DISPLAY HANDLER
@@ -551,6 +555,46 @@ export default function ProductDetails() {
     }
   };
 
+  const compressImage = (file, maxKB = 100) =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_DIM = 1200;
+          let { width, height } = img;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+          let quality = 0.9;
+          const tryCompress = () => {
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) { resolve(null); return; }
+                if (blob.size <= maxKB * 1024 || quality <= 0.1) {
+                  resolve(new File([blob], file.name, { type: "image/jpeg" }));
+                } else {
+                  quality = Math.max(0.1, quality - 0.1);
+                  tryCompress();
+                }
+              },
+              "image/jpeg",
+              quality
+            );
+          };
+          tryCompress();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!reviewForm.name.trim()) { toast.error("Please enter your name"); return; }
@@ -558,6 +602,22 @@ export default function ProductDetails() {
     if (!reviewForm.rating) { toast.error("Please select a rating"); return; }
     setReviewSubmitting(true);
     try {
+      let image_url = null;
+
+      if (reviewImageFile) {
+        const compressed = await compressImage(reviewImageFile);
+        if (compressed) {
+          const path = `${handle}/${Date.now()}-${compressed.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from("review-images")
+            .upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage.from("review-images").getPublicUrl(path);
+            image_url = urlData.publicUrl;
+          }
+        }
+      }
+
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -568,12 +628,15 @@ export default function ProductDetails() {
           product_title: product.title,
           rating: reviewForm.rating,
           text: reviewForm.text,
+          image_url,
         }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "Failed to submit"); return; }
       setReviews((prev) => [data.review, ...prev].sort((a, b) => b.rating - a.rating || new Date(b.created_at) - new Date(a.created_at)));
       setReviewForm({ name: "", location: "", rating: 0, text: "" });
+      setReviewImageFile(null);
+      setReviewImagePreview(null);
       setShowReviewModal(false);
       toast.success("Review submitted!");
     } catch {
@@ -1268,6 +1331,22 @@ export default function ProductDetails() {
                     })}
                   </div>
                   <p className="text-gray-700 text-sm leading-relaxed mb-3">&ldquo;{r.text}&rdquo;</p>
+
+                  {/* Review image thumbnail */}
+                  {r.image_url && (
+                    <button
+                      type="button"
+                      onClick={() => setLightboxUrl(r.image_url)}
+                      className="mb-3 block"
+                    >
+                      <img
+                        src={r.image_url}
+                        alt="Customer photo"
+                        className="h-20 w-20 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition"
+                      />
+                    </button>
+                  )}
+
                   <div className="flex items-center justify-between text-xs text-gray-400">
                     <span className="font-medium text-gray-600">{r.name}{r.location ? ` · ${r.location}` : ""}</span>
                     <span>{new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
@@ -1282,20 +1361,48 @@ export default function ProductDetails() {
         <RelatedProducts productId={product.id} />
       </div>
 
+      {/* Review Image Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute -top-10 right-0 text-white/70 hover:text-white"
+            >
+              <X size={28} />
+            </button>
+            <img src={lightboxUrl} alt="Review photo" className="w-full max-h-[80vh] object-contain rounded-xl" />
+          </div>
+        </div>
+      )}
+
       {/* Review Submission Modal */}
       {showReviewModal && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
+          className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center sm:px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowReviewModal(false); }}
         >
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-semibold text-[#0a1833]">Write a Review</h3>
-              <button onClick={() => setShowReviewModal(false)} className="text-gray-400 hover:text-gray-600">
+          {/* Mobile: full-width bottom sheet · Desktop: centered card */}
+          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-xl flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+
+            {/* Drag handle (mobile only) */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-gray-100">
+              <h3 className="text-base sm:text-lg font-semibold text-[#0a1833]">Write a Review</h3>
+              <button onClick={() => setShowReviewModal(false)} className="text-gray-400 hover:text-gray-600 p-1">
                 <X size={20} />
               </button>
             </div>
 
+            {/* Scrollable form body */}
+            <div className="overflow-y-auto flex-1 px-5 sm:px-6 py-4" style={{ scrollbarWidth: "thin" }}>
             <form onSubmit={handleReviewSubmit} className="space-y-4">
               {/* Star rating — slider for precise decimal input */}
               <div>
@@ -1341,24 +1448,25 @@ export default function ProductDetails() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm text-gray-600">Name <span className="text-red-400">*</span></label>
-                <input
-                  value={reviewForm.name}
-                  onChange={(e) => setReviewForm((p) => ({ ...p, name: e.target.value }))}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0a1833]"
-                  placeholder="Your name"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600">Location <span className="text-gray-400">(optional)</span></label>
-                <input
-                  value={reviewForm.location}
-                  onChange={(e) => setReviewForm((p) => ({ ...p, location: e.target.value }))}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0a1833]"
-                  placeholder="City"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-600">Name <span className="text-red-400">*</span></label>
+                  <input
+                    value={reviewForm.name}
+                    onChange={(e) => setReviewForm((p) => ({ ...p, name: e.target.value }))}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#0a1833]"
+                    placeholder="Your name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">Location <span className="text-gray-400">(optional)</span></label>
+                  <input
+                    value={reviewForm.location}
+                    onChange={(e) => setReviewForm((p) => ({ ...p, location: e.target.value }))}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#0a1833]"
+                    placeholder="City"
+                  />
+                </div>
               </div>
 
               <div>
@@ -1372,6 +1480,36 @@ export default function ProductDetails() {
                 />
               </div>
 
+              {/* Optional image upload */}
+              <div>
+                <label className="text-sm text-gray-600">Photo </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="mt-1 w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-[#0a1833] file:text-white hover:file:bg-[#1a2f5a] cursor-pointer"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setReviewImageFile(file);
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setReviewImagePreview(ev.target.result);
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                {reviewImagePreview && (
+                  <div className="mt-2 relative inline-block">
+                    <img src={reviewImagePreview} alt="Preview" className="h-24 w-24 object-cover rounded-lg border border-gray-200" />
+                    <button
+                      type="button"
+                      onClick={() => { setReviewImageFile(null); setReviewImagePreview(null); }}
+                      className="absolute -top-2 -right-2 bg-white border border-gray-200 rounded-full p-0.5 text-gray-500 hover:text-red-500"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={reviewSubmitting}
@@ -1380,7 +1518,8 @@ export default function ProductDetails() {
                 {reviewSubmitting ? "Submitting..." : "Submit Review"}
               </button>
             </form>
-          </div>
+            </div>{/* end scrollable body */}
+          </div>{/* end card */}
         </div>
       )}
 

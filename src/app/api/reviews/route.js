@@ -11,7 +11,7 @@ export async function GET(request) {
 
   const { data, error } = await supabaseAdmin
     .from("reviews")
-    .select("id, name, location, product_title, rating, text, created_at")
+    .select("id, name, location, product_title, rating, text, image_url, created_at")
     .eq("product_handle", handle)
     .order("rating", { ascending: false })
     .order("created_at", { ascending: false });
@@ -32,7 +32,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { name, location, product_handle, product_title, rating, text } = body;
+  const { name, location, product_handle, product_title, rating, text, image_url } = body;
 
   if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
   if (!text?.trim()) return NextResponse.json({ error: "Review text is required" }, { status: 400 });
@@ -47,6 +47,7 @@ export async function POST(request) {
       product_title: product_title?.trim() || null,
       rating: Number(rating),
       text: text.trim(),
+      image_url: image_url || null,
     })
     .select()
     .single();
