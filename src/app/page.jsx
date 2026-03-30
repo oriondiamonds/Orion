@@ -704,7 +704,59 @@ export default function Landing() {
         </section>
       )}
 
-      
+      {/* Testimonials */}
+      <section className="py-16 px-6 md:px-16 lg:px-24 bg-[#0a1833]">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-semibold text-white text-center mb-2">
+            What Our Customers Say
+          </h2>
+          <p className="text-center text-[#c9a84c] text-sm tracking-widest uppercase mb-12">
+            Real stories, real sparkle
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <div
+                key={i}
+                className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 hover:bg-white/10 transition"
+              >
+                {/* Stars */}
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }).map((_, s) => {
+                    const full = s + 1 <= Math.floor(t.rating);
+                    const partial = !full && s < t.rating;
+                    const fill = partial ? Math.round((t.rating - s) * 100) : 0;
+                    const style = full
+                      ? { color: "#c9a84c" }
+                      : partial
+                      ? {
+                          background: `linear-gradient(to right, #c9a84c ${fill}%, rgba(255,255,255,0.2) ${fill}%)`,
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                          backgroundClip: "text",
+                        }
+                      : { color: "rgba(255,255,255,0.2)" };
+                    return (
+                      <span key={s} className="text-lg" style={style}>★</span>
+                    );
+                  })}
+                </div>
+
+                {/* Quote */}
+                <p className="text-white/80 text-sm leading-relaxed flex-1">
+                  &ldquo;{t.text}&rdquo;
+                </p>
+
+                {/* Author */}
+                <div className="border-t border-white/10 pt-4">
+                  <p className="text-white font-semibold text-sm">{t.name}</p>
+                  <p className="text-white/40 text-xs">{t.location} · {t.product}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Promise Section */}
       <OurPromise />
@@ -819,59 +871,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-16 px-6 md:px-16 lg:px-24 bg-[#0a1833]">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-semibold text-white text-center mb-2">
-            What Our Customers Say
-          </h2>
-          <p className="text-center text-[#c9a84c] text-sm tracking-widest uppercase mb-12">
-            Real stories, real sparkle
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <div
-                key={i}
-                className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 hover:bg-white/10 transition"
-              >
-                {/* Stars */}
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 5 }).map((_, s) => {
-                    const full = s + 1 <= Math.floor(t.rating);
-                    const partial = !full && s < t.rating;
-                    const fill = partial ? Math.round((t.rating - s) * 100) : 0;
-                    const style = full
-                      ? { color: "#c9a84c" }
-                      : partial
-                      ? {
-                          background: `linear-gradient(to right, #c9a84c ${fill}%, rgba(255,255,255,0.2) ${fill}%)`,
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          backgroundClip: "text",
-                        }
-                      : { color: "rgba(255,255,255,0.2)" };
-                    return (
-                      <span key={s} className="text-lg" style={style}>★</span>
-                    );
-                  })}
-                </div>
-
-                {/* Quote */}
-                <p className="text-white/80 text-sm leading-relaxed flex-1">
-                  &ldquo;{t.text}&rdquo;
-                </p>
-
-                {/* Author */}
-                <div className="border-t border-white/10 pt-4">
-                  <p className="text-white font-semibold text-sm">{t.name}</p>
-                  <p className="text-white/40 text-xs">{t.location} · {t.product}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
     </div>
   );
