@@ -70,7 +70,8 @@ function DiamondDetails({ descriptionHtml }) {
       const totalWeights = computedTotalWeights;
 
       const dimensions =
-        specMap["Dimensions"]?.split(",").map((v) => v.trim()) || [];
+        (specMap["Diamond Size"] || specMap["Dimensions"])
+          ?.split(",").map((v) => v.trim()) || [];
 
       const rowCount = shapes.length || Math.max(weights.length, dimensions.length);
 
