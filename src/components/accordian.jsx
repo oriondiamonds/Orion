@@ -44,21 +44,35 @@ function DiamondDetails({ descriptionHtml }) {
         specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
       const weights =
         specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
-      const numbers =
-        specMap["Total Diamonds"]?.split(",").map((v) => v.trim()) || [];
-      const totalWeights =
-        specMap["Total Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
+
+      // Per-shape quantities: prefer "Diamond Count", fallback to "Total Diamonds"
+      // if it contains commas (meaning it was entered as per-shape, not a grand total)
+      const rawCount = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
+      const numbers = rawCount.includes(",")
+        ? rawCount.split(",").map((v) => v.trim())
+        : [];
+
+      // Per-shape total weights: prefer "Diamond Total Weight", fallback to
+      // "Total Diamond Weight" if comma-separated
+      const rawTotalWeight = specMap["Diamond Total Weight"] || specMap["Total Diamond Weight"] || "";
+      const storedTotalWeights = rawTotalWeight.includes(",")
+        ? rawTotalWeight.split(",").map((v) => v.trim().replace(/ct$/i, ""))
+        : [];
+
+      // Fallback: compute per-shape total weight from weight × count
+      const computedTotalWeights = shapes.map((_, i) => {
+        const w = parseFloat(weights[i]);
+        const n = parseInt(numbers[i]);
+        if (!isNaN(w) && !isNaN(n)) return (w * n).toFixed(3);
+        return storedTotalWeights[i] || "-";
+      });
+
+      const totalWeights = computedTotalWeights;
+
       const dimensions =
         specMap["Dimensions"]?.split(",").map((v) => v.trim()) || [];
 
-      // Determine number of rows (based on max array length)
-      const rowCount = Math.max(
-        shapes.length,
-        weights.length,
-        numbers.length,
-        totalWeights.length,
-        dimensions.length,
-      );
+      const rowCount = shapes.length || Math.max(weights.length, dimensions.length);
 
       const rows = Array.from({ length: rowCount }, (_, i) => ({
         shape: shapes[i] || "-",
