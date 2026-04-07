@@ -68,10 +68,8 @@ export async function computeItemPrice(pricing, descriptionHtml, selectedKarat) 
       count:  parseInt(counts[i])    || 0,
     }));
 
-    const goldWeightKey = Object.keys(specMap).find((k) =>
-      k.toLowerCase().includes(selectedKarat.toLowerCase())
-    );
-    const goldWeight = parseFloat(specMap[goldWeightKey]) || 0;
+    const karatNum = parseInt(selectedKarat);
+    const goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;
 
     const result = await calculateFinalPrice({ diamonds, goldWeight, goldKarat: selectedKarat });
     if (result) return result;

@@ -220,11 +220,9 @@ export default function PriceBreakup({
       console.log(`\n  💎 Extracted Diamond Data:`);
       console.log(JSON.stringify(diamonds, null, 4));
 
-      // extract gold info
-      const goldWeightKey = Object.keys(specMap).find((key) =>
-        key.toLowerCase().includes(selectedKarat.toLowerCase()),
-      );
-      const goldWeight = parseFloat(specMap[goldWeightKey]) || 0;
+      // gold weight from product_prices (always correct total weight for the product)
+      const karatNum = parseInt(selectedKarat);
+      const goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;
 
       console.log(`\n  ⭐ Extracted Gold Data:`);
       console.log(`     Key Found: "${goldWeightKey}"`);
