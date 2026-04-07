@@ -221,7 +221,6 @@ export default function PriceBreakup({
       console.log(JSON.stringify(diamonds, null, 4));
 
       // gold weight from product_prices (always correct total weight for the product)
-      const karatNum = parseInt(selectedKarat);
       const goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;
 
       console.log(`\n  ⭐ Extracted Gold Data:`);
