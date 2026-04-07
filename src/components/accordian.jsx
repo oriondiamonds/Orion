@@ -45,19 +45,23 @@ function DiamondDetails({ descriptionHtml }) {
       const weights =
         specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
 
-      // Per-shape quantities: prefer "Diamond Count", fallback to "Total Diamonds"
-      // if it contains commas (meaning it was entered as per-shape, not a grand total)
+      // Per-shape quantities: prefer "Diamond Count", fallback to "Total Diamonds".
+      // Comma-separated → per-shape. Single value → per-shape only if 1 shape.
       const rawCount = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
       const numbers = rawCount.includes(",")
         ? rawCount.split(",").map((v) => v.trim())
-        : [];
+        : rawCount && shapes.length <= 1
+          ? [rawCount.trim()]
+          : [];
 
       // Per-shape total weights: prefer "Diamond Total Weight", fallback to
-      // "Total Diamond Weight" if comma-separated
+      // "Total Diamond Weight". Same rule: single value ok if 1 shape.
       const rawTotalWeight = specMap["Diamond Total Weight"] || specMap["Total Diamond Weight"] || "";
       const storedTotalWeights = rawTotalWeight.includes(",")
         ? rawTotalWeight.split(",").map((v) => v.trim().replace(/ct$/i, ""))
-        : [];
+        : rawTotalWeight && shapes.length <= 1
+          ? [rawTotalWeight.trim().replace(/ct$/i, "")]
+          : [];
 
       // Fallback: compute per-shape total weight from weight × count
       const computedTotalWeights = shapes.map((_, i) => {
