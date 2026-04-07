@@ -71,7 +71,7 @@ export default function AdminPricingPortal() {
   const fetchConfig = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/pricing-config");
+      const response = await fetch("/api/pricing-config?t=" + Date.now(), { cache: "no-store" });
       const data = await response.json();
       setConfig(data);
     } catch (error) {
