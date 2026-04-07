@@ -77,17 +77,24 @@ async function getPricingConfig() {
     // Return default config as fallback
     const fallbackConfig = {
       diamondMargins: {
-        lessThan1ct: { multiplier: 2.2, flatAddition: 900 },
+        lessThan1ct: { multiplier: 2.2, flatAddition: 0 },
         greaterThan1ct: { multiplier: 2.7, flatAddition: 0 },
         greaterThan2ct: { multiplier: 2.8, flatAddition: 0 },
         greaterThan3ct: { multiplier: 2.9, flatAddition: 0 },
         greaterThan4ct: { multiplier: 3.0, flatAddition: 0 },
         greaterThan5ct: { multiplier: 3.2, flatAddition: 0 },
-        baseFees: { fee1: 150, fee2: 700 },
+        baseFees: {
+          igiCertBelow1ct: 900,   // IGI certification fee for sub-1ct stones
+          baseFixed: 700,          // base fixed cost per product
+          categoryFees: {          // additional fee by product category
+            ring: 250, earrings: 250, pendant: 250,
+            necklace: 550, bracelet: 550,
+          },
+          categoryDefault: 250,
+        },
       },
       makingCharges: {
-        lessThan2g: { ratePerGram: 950 },
-        greaterThan2g: { ratePerGram: 700 },
+        ratePerGram: 950,          // flat ₹950/g regardless of weight
         multiplier: 1.75,
       },
       gstRate: 0.03,
@@ -231,11 +238,22 @@ function getDiamondTier(weight, diamondMargins) {
   return tier;
 }
 
+// D VVS1 Round rates (premium grade, IGI certified)
+const D_VVS1_ROUND_RATES = [
+  [1.0, 1.99, 13275],
+  [2.0, 2.99, 24300],
+  [3.0, 3.99, 29500],
+  [4.0, 4.99, 41200],
+  [5.0, 5.99, 43700],
+];
+
 // === MAIN PRICE FUNCTION ===
 export async function calculateFinalPrice({
   diamonds = [],
   goldWeight = 0,
   goldKarat = "18K",
+  category = "",        // e.g. "ring", "earrings", "necklace", "bracelet", "pendant"
+  diamondGrade = "EF-VVS/VS",  // or "D-VVS1" for premium
 }) {
   log("\n" + "=".repeat(80));
   log("🚀 [PRICE CALCULATION] Starting calculation...");
@@ -250,8 +268,10 @@ export async function calculateFinalPrice({
   log("Gold Karat:", goldKarat);
 
   let totalDiamondPrice = 0;
+  let hasSubOneCt = false;
 
   log("\n💎 [DIAMOND PRICING BREAKDOWN]");
+  log(`  Grade: ${diamondGrade}  |  Category: ${category || "unspecified"}`);
 
   for (const d of diamonds) {
     const shape = (d.shape || "").toLowerCase();
@@ -267,32 +287,39 @@ export async function calculateFinalPrice({
       continue;
     }
 
+    if (weight < 1) hasSubOneCt = true;
+
     const roundShapes = ["round", "rnd", "r"];
     let rate = 0;
 
     // === Per-stone base rate lookup ===
-    log(`  🔍 Looking up base rate for ${shape} shape...`);
+    log(`  🔍 Looking up base rate for ${shape} shape (grade: ${diamondGrade})...`);
 
     if (roundShapes.includes(shape)) {
       if (weight < 1) {
+        // Sub-1ct: same rate for all grades (EF/VVS-VS and D/VVS1)
         rate = findRate(weight, [
           [0.001, 0.005, 13500],
           [0.006, 0.009, 11600],
-          [0.01, 0.02, 6900],
+          [0.01,  0.02,  6900],
           [0.025, 0.035, 4600],
-          [0.04, 0.07, 4600],
-          [0.08, 0.09, 4600],
-          [0.1, 0.12, 5100],
-          [0.13, 0.17, 5100],
-          [0.18, 0.22, 6200],
-          [0.23, 0.29, 7000],
-          [0.3, 0.39, 6750],
-          [0.4, 0.49, 6750],
-          [0.5, 0.69, 7100],
-          [0.7, 0.89, 7100],
-          [0.9, 0.99, 7300],
+          [0.04,  0.07,  4600],
+          [0.08,  0.09,  4600],
+          [0.10,  0.12,  5100],
+          [0.13,  0.17,  5100],
+          [0.18,  0.22,  6200],
+          [0.23,  0.29,  7000],
+          [0.30,  0.39,  6750],
+          [0.40,  0.49,  6750],
+          [0.50,  0.69,  7100],
+          [0.70,  0.89,  7100],
+          [0.90,  0.99,  7300],
         ]);
+      } else if (diamondGrade === "D-VVS1") {
+        // Premium D VVS1 round rates for ≥1ct
+        rate = findRate(weight, D_VVS1_ROUND_RATES);
       } else {
+        // Standard EF VVS-VS round rates for ≥1ct
         rate = findRate(weight, [
           [1.0, 1.99, 11000],
           [2.0, 2.99, 12500],
@@ -302,6 +329,7 @@ export async function calculateFinalPrice({
         ]);
       }
     } else {
+      // Fancy shapes (Pear, Oval, Marquise, etc.)
       if (weight < 1) {
         rate = findRate(weight, [[0.001, 0.99, 7800]]);
       } else {
@@ -332,15 +360,17 @@ export async function calculateFinalPrice({
     totalDiamondPrice += adjusted;
   }
 
-  // Add base fees from config
-  const fee1 = config.diamondMargins.baseFees.fee1;
-  const fee2 = config.diamondMargins.baseFees.fee2;
+  // Add fixed fees
+  const fees = config.diamondMargins.baseFees;
+  const igiCert   = hasSubOneCt ? (fees.igiCertBelow1ct ?? fees.fee1 ?? 900) : 0;
+  const baseFixed = fees.baseFixed ?? fees.fee2 ?? 700;
+  const catKey    = (category || "").toLowerCase();
+  const categoryFee = fees.categoryFees?.[catKey] ?? fees.categoryDefault ?? 250;
 
-  log(
-    `\n  💸 Base Fees: Fee1=${fee1} + Fee2=${fee2} = ₹${fee1 + fee2}`,
-  );
+  log(`\n  💸 Fees: IGI cert=${igiCert} | Base=${baseFixed} | Category(${catKey})=${categoryFee}`);
+  log(`     Total fees: ₹${igiCert + baseFixed + categoryFee}`);
 
-  totalDiamondPrice += fee1 + fee2;
+  totalDiamondPrice += igiCert + baseFixed + categoryFee;
 
   log(`  📊 Total Diamond Price (with fees): ₹${totalDiamondPrice}`);
 
@@ -374,15 +404,14 @@ export async function calculateFinalPrice({
   // === Making charges (using config) ===
   log("\n🔨 [MAKING CHARGES]");
 
+  // Flat ₹950/g regardless of weight
   const ratePerGram =
-    goldWeight >= 2
-      ? config.makingCharges.greaterThan2g.ratePerGram
-      : config.makingCharges.lessThan2g.ratePerGram;
+    config.makingCharges.ratePerGram ??
+    config.makingCharges.lessThan2g?.ratePerGram ??
+    950;
 
   log(`  Gold Weight: ${goldWeight}g`);
-  log(
-    `  Rate Per Gram (${goldWeight >= 2 ? ">= 2g" : "< 2g"}): ₹${ratePerGram}/gram`,
-  );
+  log(`  Rate Per Gram: ₹${ratePerGram}/gram (flat)`);
   log(`  Multiplier: ${config.makingCharges.multiplier}`);
 
   let makingCharge = goldWeight * ratePerGram;

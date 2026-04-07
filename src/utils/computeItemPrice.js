@@ -31,8 +31,7 @@ export async function computeItemPrice(pricing, descriptionHtml, selectedKarat) 
 
     const karatRate = gold24Price * (karatNum / 24);
     const rawGoldPrice = karatRate * weightK;
-    const makingChargeRate = weightK >= 2 ? weightK * 700 : weightK * 950;
-    const makingChargeMultiplied = makingChargeRate * 1.75;
+    const makingChargeMultiplied = weightK * 950 * 1.75; // flat ₹950/g × 1.75
 
     const goldPrice = Math.round(rawGoldPrice);
     const makingCharge = Math.round(makingChargeMultiplied);
