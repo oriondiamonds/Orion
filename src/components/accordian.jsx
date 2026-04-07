@@ -193,8 +193,11 @@ function ProductSpecs({
     // ✅ Exclude all karat weights regardless of selected one
     const excludeKeys = [
       "Diamond Shape",
-      "Total Diamonds",
+      "Diamond Size",
+      "Diamond Count",
       "Diamond Weight",
+      "Diamond Total Weight",
+      "Total Diamonds",
       "Total Diamond Weight",
       "Diamond Grade",
       "Gold Purity",
@@ -205,9 +208,10 @@ function ProductSpecs({
       "9K Gold",
       "14K Gold",
       "18K Gold",
+      "22K Gold",
+      "24K Gold",
       "Silver",
       "Platinum",
-      "Dimensions",
       "Dimensions",
     ];
 
