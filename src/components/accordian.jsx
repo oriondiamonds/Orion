@@ -275,7 +275,7 @@ function ProductSpecs({
       {/* Product variant details */}
       <table className="w-full text-sm border-t border-gray-200 mt-3">
         <tbody className="divide-y divide-gray-200">
-          {[...options].reverse().map((opt) => (
+          {[...options].reverse().filter((opt) => opt.name !== "Diamond Grade").map((opt) => (
             <tr key={opt.name} className="hover:bg-white/50 transition-colors">
               <td className="py-3 font-semibold text-gray-800 w-1/3">
                 {opt.name}
