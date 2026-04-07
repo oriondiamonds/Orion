@@ -9,8 +9,8 @@ const DEFAULT_CONFIG = {
   diamondMargins: {
     lessThan1ct: {
       multiplier: 2.2,
-      flatAddition: 900,
-      description: "For diamonds < 1ct: multiply by 2.2 and add ₹900",
+      flatAddition: 0,
+      description: "For diamonds < 1ct: multiply by 2.2",
     },
     greaterThan1ct: {
       multiplier: 2.7,
@@ -38,22 +38,20 @@ const DEFAULT_CONFIG = {
       description: "For diamonds ≥ 5ct: multiply by 3.2",
     },
     baseFees: {
-      fee1: 150,
-      fee2: 700,
-      description: "Flat fees added to all diamond prices",
+      igiCertBelow1ct: 900,
+      baseFixed: 700,
+      categoryFees: {
+        ring: 250, earrings: 250, pendant: 250,
+        necklace: 550, bracelet: 550,
+      },
+      categoryDefault: 250,
+      description: "IGI cert (sub-1ct stones) + base fixed + category fee",
     },
   },
   makingCharges: {
-    lessThan2g: {
-      ratePerGram: 950,
-      description: "For gold weight < 2g",
-    },
-    greaterThan2g: {
-      ratePerGram: 700,
-      description: "For gold weight ≥ 2g",
-    },
+    ratePerGram: 950,
     multiplier: 1.75,
-    description: "Final making charge is multiplied by 1.75",
+    description: "Flat ₹950/g regardless of weight, multiplied by 1.75",
   },
   gstRate: 0.03,
 };
