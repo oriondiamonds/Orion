@@ -46,8 +46,8 @@ export default function CartItemPriceBreakup({ item, appliedCoupon, cartSubtotal
           specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
         const weights =
           specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
-        const counts =
-          specMap["Total Diamonds"]?.split(",").map((v) => v.trim()) || [];
+        const countRaw = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
+        const counts = countRaw.split(",").map((v) => v.trim());
 
         const diamonds = shapes.map((shape, i) => ({
           shape,
