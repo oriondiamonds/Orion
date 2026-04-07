@@ -4,7 +4,7 @@ import PriceBreakup from "./PriceBreakup";
 /* ---------- DIAMOND DETAILS ---------- */
 
 function DiamondDetails({ descriptionHtml }) {
-  const [diamondData, setDiamondData] = useState([]);
+  const [diamondData, setDiamondData] = useState({ rows: [], grade: "" });
 
   useEffect(() => {
     if (descriptionHtml) {
@@ -87,11 +87,13 @@ function DiamondDetails({ descriptionHtml }) {
         dimensions: dimensions[i] || "-",
       }));
 
-      setDiamondData(rows);
+      setDiamondData({ rows, grade: specMap["Diamond Grade"] || "" });
     }
   }, [descriptionHtml]);
 
-  if (!diamondData.length) return <p>No diamond details available.</p>;
+  const { rows } = diamondData;
+
+  if (!rows.length) return <p>No diamond details available.</p>;
 
   return (
     <div className="overflow-x-auto">
@@ -116,7 +118,7 @@ function DiamondDetails({ descriptionHtml }) {
           </tr>
         </thead>
         <tbody>
-          {diamondData.map((row, idx) => (
+          {rows.map((row, idx) => (
             <tr
               key={idx}
               className="odd:bg-white even:bg-gray-50 hover:bg-white/60 transition-colors"
@@ -312,11 +314,15 @@ export default function ProductAccordion({
     {
       key: "diamond",
       label: "DIAMOND DETAILS",
+      sublabel: (() => {
+        const m = product.descriptionHtml?.match(/<strong>Diamond Grade:<\/strong>\s*([^<]+)/);
+        return m ? m[1].trim() : "";
+      })(),
       content: <DiamondDetails descriptionHtml={product.descriptionHtml} />,
     },
     {
       key: "product",
-      label: "PRODUCT DETAILS",
+      label: "METAL DETAILS",
       content: (
         <ProductSpecs
           descriptionHtml={product.descriptionHtml}
@@ -373,7 +379,10 @@ export default function ProductAccordion({
             className="w-full flex justify-between items-center px-6 py-4 text-left font-semibold text-gray-900 hover:bg-gray-50 transition-colors duration-200 group"
             onClick={() => toggleTab(tab.key)}
           >
-            <span className="text-sm tracking-wide">{tab.label}</span>
+            <span className="text-sm tracking-wide">
+              {tab.label}
+              {tab.sublabel && <span className="ml-1 font-normal text-gray-500">({tab.sublabel})</span>}
+            </span>
             {openTab === tab.key ? (
               <ChevronUp size={20} className="stroke-2 text-gray-500" />
             ) : (
