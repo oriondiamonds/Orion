@@ -56,13 +56,16 @@ export async function computeItemPrice(pricing, descriptionHtml, selectedKarat) 
       if (key && value) specMap[key] = value;
     });
 
-    const shapes = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
+    const shapes  = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
+    // Per-stone weight (Diam Wt) — comma-separated per shape
     const weights = specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
-    const counts = specMap["Total Diamonds"]?.split(",").map((v) => v.trim()) || [];
+    // Per-shape count (Diamond Count) — preferred; fallback to grand total Total Diamonds
+    const countRaw = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
+    const counts   = countRaw.split(",").map((v) => v.trim());
     const diamonds = shapes.map((shape, i) => ({
       shape,
       weight: parseFloat(weights[i]) || 0,
-      count: parseInt(counts[i]) || 0,
+      count:  parseInt(counts[i])    || 0,
     }));
 
     const goldWeightKey = Object.keys(specMap).find((k) =>
