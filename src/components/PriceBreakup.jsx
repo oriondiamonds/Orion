@@ -225,7 +225,6 @@ export default function PriceBreakup({
       const goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;
 
       console.log(`\n  ⭐ Extracted Gold Data:`);
-      console.log(`     Key Found: "${goldWeightKey}"`);
       console.log(`     Weight (${selectedKarat}): ${goldWeight}g`);
 
       // calculate
