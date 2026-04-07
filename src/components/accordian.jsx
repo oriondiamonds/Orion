@@ -314,10 +314,7 @@ export default function ProductAccordion({
     {
       key: "diamond",
       label: "DIAMOND DETAILS",
-      sublabel: (() => {
-        const m = product.descriptionHtml?.match(/<strong>Diamond Grade:<\/strong>\s*([^<]+)/);
-        return m ? m[1].trim() : "";
-      })(),
+      sublabel: selectedOptions?.["Diamond Grade"] || "",
       content: <DiamondDetails descriptionHtml={product.descriptionHtml} />,
     },
     {
