@@ -10,7 +10,6 @@ import Link from "next/link";
 import { getBestSellers, getFeaturedProducts, getProductByHandle } from "../queries/products";
 import { formatIndianCurrency } from "../utils/formatIndianCurrency";
 import { computeItemPrice } from "../utils/computeItemPrice";
-import { getSheetPricing } from "../utils/sheetPricing";
 import { testimonials } from "../data/testimonials";
 
 export default function Landing() {
@@ -24,7 +23,6 @@ export default function Landing() {
   const [bestSellers, setBestSellers] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [livePrices, setLivePrices] = useState({});
-  const [sheetPricing, setSheetPricing] = useState({});
   const bestSellersSliderRef = useRef(null);
   const featuredSliderRef = useRef(null);
   const [formData, setFormData] = useState({
@@ -116,65 +114,63 @@ export default function Landing() {
     let mounted = true;
 
     async function loadCuratedProducts() {
-      const [bestsellerData, featuredData, pricingMap] = await Promise.all([
+      const [bestsellerData, featuredData] = await Promise.all([
         getBestSellers(8),
         getFeaturedProducts(8),
-        getSheetPricing(),
       ]);
 
       if (!mounted) return;
       setBestSellers(bestsellerData);
       setFeaturedProducts(featuredData);
-      setSheetPricing(pricingMap || {});
 
-      // Live price computation — shared cache with collection pages
-      const CACHE_KEY = "orion_live_prices_v1";
+      // Live price computation — shared cache with collection pages (same key/version)
+      const CACHE_KEY = "orion_live_prices_v2";
       const TTL = 10 * 60 * 1000; // 10 minutes
+
+      // Check pricing config version to detect stale cache
+      let configVersion = null;
+      try {
+        const cfgRes = await fetch("/api/pricing-config", { cache: "no-store" });
+        const cfg = await cfgRes.json();
+        configVersion = cfg.lastUpdated || null;
+      } catch {}
 
       let cached = null;
       try { cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch {}
 
+      const configChanged = configVersion && cached?.configVersion !== configVersion;
+      const timeStale = !cached || Date.now() - cached.timestamp >= TTL;
+
       const allProducts = [...bestsellerData, ...featuredData];
-      const needsFetch = allProducts.filter(
-        (p) => !cached || Date.now() - cached.timestamp >= TTL || !cached.prices?.[`${p.handle}_10K`] || !cached.prices?.[`${p.handle}_14K`] || !cached.prices?.[`${p.handle}_18K`]
-      );
+      const needsFetch = (timeStale || configChanged)
+        ? allProducts
+        : allProducts.filter(
+            (p) => !cached.prices?.[`${p.handle}_10K`] || !cached.prices?.[`${p.handle}_14K`] || !cached.prices?.[`${p.handle}_18K`]
+          );
 
       let prices = { ...(cached?.prices || {}) };
 
       if (needsFetch.length > 0) {
-        let gold24Price = 8500;
-        try {
-          const r = await fetch("/api/gold-price");
-          const d = await r.json();
-          if (d.success && d.price) gold24Price = d.price;
-        } catch {}
-
         await Promise.all(
           needsFetch.map(async (product) => {
             try {
               const pd = await getProductByHandle(product.handle);
               const pricing = pd?.product?.pricing || null;
               const descriptionHtml = pd?.product?.descriptionHtml || null;
-              for (const karatNum of [10, 14, 18]) {
-                const karat = `${karatNum}K`;
-                if (pricing?.diamond_price && pricing[`weight_${karatNum}k`]) {
-                  const w = Number(pricing[`weight_${karatNum}k`]);
-                  const dp = Math.round(Number(pricing.diamond_price));
-                  const raw = gold24Price * (karatNum / 24) * w;
-                  const making = (w >= 2 ? w * 700 : w * 950) * 1.75;
-                  const sub = Math.round(dp + raw + making);
-                  prices[`${product.handle}_${karat}`] = sub + Math.round(sub * 0.03);
-                } else {
-                  const result = await computeItemPrice(pricing, descriptionHtml, karat);
-                  if (result?.totalPrice) prices[`${product.handle}_${karat}`] = result.totalPrice;
-                }
+              for (const karat of ["10K", "14K", "18K"]) {
+                const result = await computeItemPrice(pricing, descriptionHtml, karat);
+                if (result?.totalPrice) prices[`${product.handle}_${karat}`] = result.totalPrice;
               }
             } catch {}
           })
         );
 
         try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), prices }));
+          const prevEntry = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+          const cacheEntry = (timeStale || configChanged)
+            ? { timestamp: Date.now(), configVersion, prices }
+            : { timestamp: prevEntry?.timestamp || Date.now(), configVersion, prices };
+          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheEntry));
         } catch {}
       }
 
@@ -191,7 +187,6 @@ export default function Landing() {
   const getCollectionMatchedPrice = (product) => {
     return (
       livePrices[`${product.handle}_10K`] ||
-      sheetPricing?.[product.handle]?.price10K ||
       product.price ||
       0
     );
