@@ -179,7 +179,7 @@ async function getGoldPrice() {
     console.warn("⚠️  [GOLD PRICE] Using FALLBACK price: 6500 ₹/gram");
 
     // Fallback to a reasonable default
-    return 6500; // Default 24K gold price per gram
+    return 9000; // Default 24K gold price per gram — update if market moves significantly
   }
 }
 
