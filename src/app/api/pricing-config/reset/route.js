@@ -1,6 +1,7 @@
 // src/app/api/pricing-config/reset/route.js
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../utils/supabase-admin.js";
+import { clearPricingCache } from "../../../../utils/price.js";
 
 const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "changeme123").trim();
 
@@ -110,6 +111,7 @@ export async function POST(request) {
     if (updateError) throw updateError;
 
     console.log("✅ Config reset to defaults");
+    clearPricingCache();
 
     return NextResponse.json({
       success: true,

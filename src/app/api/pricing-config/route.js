@@ -1,6 +1,7 @@
 // src/app/api/pricing-config/route.js
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../utils/supabase-admin.js";
+import { clearPricingCache } from "../../../utils/price.js";
 
 const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "changeme123").trim();
 
@@ -99,7 +100,7 @@ export async function GET() {
       .single();
 
     const CACHE_HEADERS = {
-      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      "Cache-Control": "no-store",
     };
 
     if (error && error.code === "PGRST116") {
@@ -177,6 +178,7 @@ export async function POST(request) {
     if (updateError) throw updateError;
 
     console.log("✅ Config saved to Supabase");
+    clearPricingCache();
 
     return NextResponse.json({
       success: true,
