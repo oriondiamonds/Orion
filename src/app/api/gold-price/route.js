@@ -54,11 +54,14 @@ async function fetch24kPriceFromNavkarGold() {
     const text = $("body").text();
     console.log("📊 Raw response:", text.substring(0, 300));
 
-    // Method 1: Look for GOLD 999 IMP (ID 7594)
-    // Format: 7594	GOLD 999 IMP	156647
-    // This is the 10-gram price, divide by 10 to get per-gram
-    console.log("   Looking for GOLD 999 IMP...");
-    const gold999Match = text.match(/7594\s+GOLD\s+999\s+IMP\s+(\d+)/);
+    // Look for GOLD 999 IMP (ID 7594)
+    // Format: 7594  GOLD 999 IMP (TODAY)  156500  156500  156758  153147
+    // Columns:  ID | NAME | CURRENT | BUY | HIGH | LOW
+    // We want the CURRENT price (first number after the name)
+    console.log("   Looking for GOLD 999 IMP (ID 7594)...");
+
+    // Match ID 7594 followed by name (possibly containing TODAY etc), then the first large number = current price
+    const gold999Match = text.match(/7594[\s\t]+GOLD[^\d]+?(\d{5,6})[\s\t]/);
     if (gold999Match) {
       const price10gm = parseInt(gold999Match[1]);
       goldPrice = price10gm / 10;
@@ -68,58 +71,23 @@ async function fetch24kPriceFromNavkarGold() {
       return goldPrice;
     }
 
-    // Method 2: Alternative - look for "GOLD 999 IMP" in text and extract number
-    console.log("   Trying alternative parsing...");
+    // Fallback: scan lines for GOLD 999 IMP and pick the FIRST price column (not last)
+    console.log("   Trying line-by-line fallback...");
     const lines = text.split(/[\n\r]+/).filter((line) => line.trim());
-    console.log(`📊 Found ${lines.length} lines in response`);
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-
-      // Look for GOLD 999 IMP line
-      if (
-        line.includes("GOLD 999 IMP") ||
-        (line.includes("GOLD") && line.includes("999"))
-      ) {
-        console.log(`   Line ${i}: ${line}`);
-
-        // Extract price from this line
-        // Pattern: 7594	GOLD 999 IMP	156647
-        const parts = line.split(/\s+|\t+/);
-        console.log(`   Parts:`, parts);
-
-        // Find the number at the end (should be 150000-160000 range)
-        for (let j = parts.length - 1; j >= 0; j--) {
-          const price = parseInt(parts[j]);
-          // 10-gram gold price should be around 150000-160000
-          if (price > 150000 && price < 160000) {
+    for (const line of lines) {
+      if (line.includes("GOLD 999 IMP") || line.includes("7594")) {
+        console.log(`   Matched line: ${line}`);
+        const parts = line.split(/[\s\t]+/).filter(Boolean);
+        // First number in 140000–175000 range after the name = current price
+        for (const part of parts) {
+          const price = parseInt(part);
+          if (price > 140000 && price < 175000) {
             goldPrice = price / 10;
-            console.log(
-              `✅ Found 10gm price: ₹${price} → ₹${goldPrice.toFixed(2)}/gram`,
-            );
+            console.log(`✅ Fallback: ₹${price} for 10gm → ₹${goldPrice.toFixed(2)}/gram`);
             break;
           }
         }
-
         if (goldPrice) break;
-      }
-    }
-
-    // Method 3: Look for any 6-digit number in 150000-160000 range and convert
-    if (!goldPrice) {
-      console.log("   Trying pattern matching for 10gm price...");
-      const numbers = text.match(/\b\d{6}\b/g);
-      if (numbers) {
-        for (const num of numbers) {
-          const price = parseInt(num);
-          if (price > 150000 && price < 160000) {
-            goldPrice = price / 10;
-            console.log(
-              `✅ Found 10gm price by pattern: ₹${price} → ₹${goldPrice.toFixed(2)}/gram`,
-            );
-            break;
-          }
-        }
       }
     }
 
