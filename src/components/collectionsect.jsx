@@ -86,7 +86,7 @@ export default function CollectionSection({ id, title, items = [] }) {
   useEffect(() => {
     if (!items.length) return;
 
-    const CACHE_KEY = "orion_live_prices_v2";
+    const CACHE_KEY = "orion_live_prices_v3";
     const TTL = 10 * 60 * 1000; // 10 minutes
 
     async function computeLivePrices() {

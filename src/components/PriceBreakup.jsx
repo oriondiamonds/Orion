@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { calculateFinalPrice, clearAllCaches } from "../utils/price";
+import { calculateFinalPrice } from "../utils/price";
 import { formatIndianCurrency, formatINR } from "../utils/formatIndianCurrency";
 
 export default function PriceBreakup({
@@ -76,7 +76,6 @@ export default function PriceBreakup({
 
       console.log("\n🔄 [MODE: DYNAMIC CALCULATION]");
       console.log("  This mode USES your dynamic pricing config ✅");
-      clearAllCaches();
 
       // Gold weight from DB
       const goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;

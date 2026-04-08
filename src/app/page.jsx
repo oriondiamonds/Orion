@@ -124,7 +124,7 @@ export default function Landing() {
       setFeaturedProducts(featuredData);
 
       // Live price computation — shared cache with collection pages (same key/version)
-      const CACHE_KEY = "orion_live_prices_v2";
+      const CACHE_KEY = "orion_live_prices_v3";
       const TTL = 10 * 60 * 1000; // 10 minutes
 
       // Check pricing config version to detect stale cache
