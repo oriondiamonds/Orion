@@ -166,6 +166,7 @@ export async function fetchCollectionByHandle(handle) {
 
 // Search products using full-text search
 export async function fetchSearchProducts(query, limit = 50) {
+  // product_prices links by handle (text), not FK — must be fetched separately
   const { data: products, error } = await supabase
     .from("products")
     .select(
@@ -174,8 +175,7 @@ export async function fetchSearchProducts(query, limit = 50) {
       variants:product_variants(
         *,
         selected_options:variant_selected_options(*)
-      ),
-      pricing:product_prices(*)
+      )
     `
     )
     .textSearch("search_vector", query, {
@@ -184,17 +184,24 @@ export async function fetchSearchProducts(query, limit = 50) {
     })
     .limit(limit);
 
-  // Flatten pricing array to single object (same shape as getProductByHandle)
-  if (products) {
-    products.forEach((p) => {
-      p.pricing = Array.isArray(p.pricing) ? p.pricing[0] || null : p.pricing;
-    });
-  }
-
   if (error) {
     console.error("Error searching products:", error.message);
     return [];
   }
 
-  return products || [];
+  if (!products?.length) return [];
+
+  // Fetch pricing for all matched products in one batch query
+  const handles = products.map((p) => p.handle);
+  const { data: pricingRows } = await supabase
+    .from("product_prices")
+    .select("*")
+    .in("handle", handles);
+
+  // Attach pricing to each product by handle
+  const pricingMap = {};
+  (pricingRows || []).forEach((row) => { pricingMap[row.handle] = row; });
+  products.forEach((p) => { p.pricing = pricingMap[p.handle] || null; });
+
+  return products;
 }
