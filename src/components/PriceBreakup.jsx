@@ -85,21 +85,27 @@ export default function PriceBreakup({
       let diamonds = [];
 
       // Prefer structured DB columns — more reliable than HTML parsing
+      // diamond_weight and total_diamonds must be comma-separated strings matching shape count
       if (pricing?.diamond_shapes && pricing?.diamond_weight && pricing?.total_diamonds) {
-        console.log("  💎 Reading diamond data from DB columns");
-        const shapes  = pricing.diamond_shapes.split(",").map((v) => v.trim()).filter(Boolean);
-        const weights = pricing.diamond_weight.split(",").map((v) => v.trim());
-        const counts  = pricing.total_diamonds.split(",").map((v) => v.trim());
-        diamonds = shapes.map((shape, i) => ({
-          shape,
-          weight: parseFloat(weights[i]) || 0,
-          count:  parseInt(counts[i])    || 0,
-        })).filter((d) => d.weight > 0 && d.count > 0);
+        const shapes  = String(pricing.diamond_shapes).split(",").map((v) => v.trim()).filter(Boolean);
+        const weights = String(pricing.diamond_weight).split(",").map((v) => v.trim());
+        const counts  = String(pricing.total_diamonds).split(",").map((v) => v.trim());
+        // Only use DB path if per-group data is present (counts match number of shape groups)
+        if (weights.length === shapes.length && counts.length === shapes.length) {
+          console.log("  💎 Reading diamond data from DB columns");
+          diamonds = shapes.map((shape, i) => ({
+            shape,
+            weight: parseFloat(weights[i]) || 0,
+            count:  parseInt(counts[i])    || 0,
+          })).filter((d) => d.weight > 0 && d.count > 0);
+        } else {
+          console.log("  ⚠️ DB columns have aggregate values (not per-group) — falling back to HTML");
+        }
       }
 
-      // Fall back to HTML parsing if DB columns missing
+      // Fall back to HTML parsing if DB columns missing or have aggregate-only values
       if (!diamonds.length && descriptionHtml) {
-        console.log("  💎 DB columns empty — falling back to HTML parsing");
+        console.log("  💎 DB columns missing/invalid — falling back to HTML parsing");
         const parser = new DOMParser();
         const doc = parser.parseFromString(descriptionHtml, "text/html");
         const liElements = doc.querySelectorAll(".product-description ul li");

@@ -50,18 +50,22 @@ export async function computeItemPrice(pricing, descriptionHtml, selectedKarat) 
     let diamonds = [];
 
     // Prefer structured DB columns — avoids HTML parsing errors
+    // diamond_weight and total_diamonds must be comma-separated strings matching shape count
     if (pricing?.diamond_shapes && pricing?.diamond_weight && pricing?.total_diamonds) {
-      const shapes  = pricing.diamond_shapes.split(",").map((v) => v.trim()).filter(Boolean);
-      const weights = pricing.diamond_weight.split(",").map((v) => v.trim());
-      const counts  = pricing.total_diamonds.split(",").map((v) => v.trim());
-      diamonds = shapes.map((shape, i) => ({
-        shape,
-        weight: parseFloat(weights[i]) || 0,
-        count:  parseInt(counts[i])    || 0,
-      })).filter((d) => d.weight > 0 && d.count > 0);
+      const shapes  = String(pricing.diamond_shapes).split(",").map((v) => v.trim()).filter(Boolean);
+      const weights = String(pricing.diamond_weight).split(",").map((v) => v.trim());
+      const counts  = String(pricing.total_diamonds).split(",").map((v) => v.trim());
+      // Only use DB path if per-group data is present (counts match number of shape groups)
+      if (weights.length === shapes.length && counts.length === shapes.length) {
+        diamonds = shapes.map((shape, i) => ({
+          shape,
+          weight: parseFloat(weights[i]) || 0,
+          count:  parseInt(counts[i])    || 0,
+        })).filter((d) => d.weight > 0 && d.count > 0);
+      }
     }
 
-    // Fall back to HTML parsing if DB columns missing/empty
+    // Fall back to HTML parsing if DB columns missing or have aggregate-only values
     if (!diamonds.length && descriptionHtml) {
       const parser = new DOMParser();
       const doc = parser.parseFromString(descriptionHtml, "text/html");
