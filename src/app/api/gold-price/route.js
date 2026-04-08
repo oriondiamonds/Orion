@@ -14,13 +14,13 @@ function isCacheValid() {
     Date.now() - priceCache.lastFetchTime < CACHE_TTL_MS;
 }
 
-// ── Source 1: Navkar Gold (try multiple URL variants) ─────────────────────────
+// ── Source 1: Navkar Gold — ID 9054 (GOLD COSTING, ₹/10g) ────────────────────
 async function fetchFromNavkar() {
-  // Try standard HTTPS port first (Vercel allows 443), then HTTP on 7768
+  const BASE = "VOTSBroadcastStreaming/Services/xml/GetLiveRateByTemplateID/navkar";
   const candidates = [
-    "https://bcast.navkargold.com/VOTSBroadcastStreaming/Services/xml/GetLiveRateByTemplateID/navkar",
-    "http://bcast.navkargold.com:7768/VOTSBroadcastStreaming/Services/xml/GetLiveRateByTemplateID/navkar",
-    "https://bcast.navkargold.com:7768/VOTSBroadcastStreaming/Services/xml/GetLiveRateByTemplateID/navkar",
+    `https://bcast.navkargold.com/${BASE}?_=${Date.now()}`,
+    `http://bcast.navkargold.com:7768/${BASE}?_=${Date.now()}`,
+    `https://bcast.navkargold.com:7768/${BASE}?_=${Date.now()}`,
   ];
 
   for (const url of candidates) {
@@ -32,32 +32,38 @@ async function fetchFromNavkar() {
       });
       if (!res.ok) { console.warn(`   → HTTP ${res.status}`); continue; }
 
-      const html  = await res.text();
-      const $     = cheerio.load(html);
-      const text  = $("body").text();
+      const xmlText = await res.text();
+      const $       = cheerio.load(xmlText, { xmlMode: true });
 
-      // ID 7594 = GOLD 999 IMP — columns: ID | NAME | CURRENT | BUY | HIGH | LOW
-      const match = text.match(/7594[\s\t]+GOLD[^\d]+?(\d{5,6})[\s\t]/);
-      if (match) {
-        const price = parseInt(match[1]) / 10;
-        console.log(`✅ Navkar GOLD 999 IMP: ₹${price}/g (via ${url})`);
-        return price;
+      // Collect lines from <string> XML elements (tab-separated rows)
+      const lines = [];
+      $("string").each((_, el) => {
+        const content = $(el).text().trim();
+        if (content) lines.push(content);
+      });
+
+      // Fallback: plain text lines if no <string> elements found
+      if (!lines.length) {
+        xmlText.split(/[\r\n]+/).forEach((line) => {
+          const t = line.trim();
+          if (t && !t.startsWith("<") && !t.startsWith("<?")) lines.push(t);
+        });
       }
 
-      // Line-by-line fallback — pick FIRST number in valid range
-      for (const line of text.split(/[\n\r]+/)) {
-        if (line.includes("GOLD 999 IMP") || line.includes("7594")) {
-          for (const part of line.split(/[\s\t]+/)) {
-            const n = parseInt(part);
-            if (n > 140000 && n < 200000) {
-              const price = n / 10;
-              console.log(`✅ Navkar fallback scan: ₹${price}/g`);
-              return price;
-            }
+      // ID 9054 = GOLD COSTING — value is ₹/10g → divide by 10 to get ₹/g
+      for (const line of lines) {
+        const normalised = line.replace(/\\t/g, "\t");
+        const parts = normalised.split("\t").map((p) => p.trim()).filter(Boolean);
+        if (parts.length >= 3 && parts[0] === "9054" && parts[1].toUpperCase().includes("GOLD")) {
+          const per10g = parseFloat(parts[2]);
+          if (!isNaN(per10g) && per10g > 0) {
+            const price = per10g / 10;
+            console.log(`✅ Navkar GOLD COSTING (9054): ₹${per10g}/10g → ₹${price}/g`);
+            return price;
           }
         }
       }
-      console.warn(`   → Parsed but GOLD 999 IMP not found`);
+      console.warn(`   → Parsed but GOLD COSTING (9054) not found`);
     } catch (err) {
       console.warn(`   → ${err.message}`);
     }
