@@ -125,14 +125,6 @@ export default function CollectionSection({ id, title, items = [] }) {
       // Show cached prices immediately while fetching missing ones
       if (Object.keys(existingPrices).length > 0) setLivePrices(existingPrices);
 
-      // Fetch current gold price once
-      let gold24Price = 8500;
-      try {
-        const res = await fetch("/api/gold-price");
-        const data = await res.json();
-        if (data.success && data.price) gold24Price = data.price;
-      } catch {}
-
       // Fetch pricing data for missing/stale items in parallel
       const results = await Promise.all(
         itemsToFetch.map(async (item) => {
@@ -143,22 +135,8 @@ export default function CollectionSection({ id, title, items = [] }) {
             const prices = {};
 
             for (const karat of karats) {
-              const karatNum = parseInt(karat);
-              if (pricing?.diamond_price && pricing[`weight_${karatNum}k`]) {
-                // Mode 2: inline with pre-fetched gold price (avoids N extra API calls)
-                const weightK = Number(pricing[`weight_${karatNum}k`]);
-                const diamondPrice = Math.round(Number(pricing.diamond_price));
-                const rawGoldPrice = gold24Price * (karatNum / 24) * weightK;
-                const makingRate = weightK >= 2 ? weightK * 700 : weightK * 950;
-                const making = makingRate * 1.75;
-                const subtotal = Math.round(diamondPrice + rawGoldPrice + making);
-                const gst = Math.round(subtotal * 0.03);
-                prices[`${item.handle}_${karat}`] = subtotal + gst;
-              } else {
-                // Mode 3 fallback (HTML parsing)
-                const result = await computeItemPrice(pricing, descriptionHtml, karat);
-                if (result?.totalPrice) prices[`${item.handle}_${karat}`] = result.totalPrice;
-              }
+              const result = await computeItemPrice(pricing, descriptionHtml, karat);
+              if (result?.totalPrice) prices[`${item.handle}_${karat}`] = result.totalPrice;
             }
 
             return prices;
