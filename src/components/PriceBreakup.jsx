@@ -122,19 +122,12 @@ export default function PriceBreakup({
             `  Gold Price Calculation: ₹${karatRate.toFixed(2)} × ${weightK}g = ₹${rawGoldPrice.toFixed(2)}`,
           );
 
-          const makingChargeRate = weightK >= 2 ? weightK * 700 : weightK * 950;
-          const makingChargeMultiplied = makingChargeRate * 1.75;
+          const makingChargeMultiplied = weightK * 950 * 1.75; // flat ₹950/g × 1.75
 
           console.log(`\n  🔨 Making Charges:`);
-          console.log(
-            `     Rate Per Gram (${weightK >= 2 ? ">= 2g" : "< 2g"}): ₹${weightK >= 2 ? 700 : 950}/gram`,
-          );
-          console.log(
-            `     Before Multiplier: ${weightK} × ${weightK >= 2 ? 700 : 950} = ₹${makingChargeRate}`,
-          );
-          console.log(
-            `     After Multiplier (×1.75): ₹${makingChargeRate} × 1.75 = ₹${makingChargeMultiplied}`,
-          );
+          console.log(`     Rate Per Gram: ₹950/gram (flat)`);
+          console.log(`     Before Multiplier: ${weightK} × 950 = ₹${weightK * 950}`);
+          console.log(`     After Multiplier (×1.75): ₹${weightK * 950} × 1.75 = ₹${makingChargeMultiplied}`);
 
           const subtotal = Math.round(
             diamondPrice + rawGoldPrice + makingChargeMultiplied,
