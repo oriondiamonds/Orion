@@ -185,22 +185,22 @@ export async function GET() {
       new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
     );
 
-    return NextResponse.json({
-      success: true,
-      city: "Surat",
-      price: Math.round(priceCache.price * 100) / 100,
-      unit: "INR per gram",
-      date: priceCache.lastFetchDate,
-      lastUpdated: istTime.toISOString(),
-      nextUpdate: "Refreshes every hour automatically",
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        city: "Surat",
+        price: Math.round(priceCache.price * 100) / 100,
+        unit: "INR per gram",
+        date: priceCache.lastFetchDate,
+        lastUpdated: istTime.toISOString(),
+        nextUpdate: "Refreshes every hour automatically",
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     console.error("❌ GET endpoint error:", error.message);
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message,
-      },
+      { success: false, error: error.message },
       { status: 500 },
     );
   }
@@ -215,22 +215,22 @@ export async function POST() {
       new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
     );
 
-    return NextResponse.json({
-      success: true,
-      city: "Surat",
-      price: Math.round(priceCache.price * 100) / 100,
-      unit: "INR per gram",
-      date: priceCache.lastFetchDate,
-      lastUpdated: istTime.toISOString(),
-      nextUpdate: "Refreshes every hour automatically",
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        city: "Surat",
+        price: Math.round(priceCache.price * 100) / 100,
+        unit: "INR per gram",
+        date: priceCache.lastFetchDate,
+        lastUpdated: istTime.toISOString(),
+        nextUpdate: "Refreshes every hour automatically",
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     console.error("❌ POST endpoint error:", error.message);
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message,
-      },
+      { success: false, error: error.message },
       { status: 500 },
     );
   }
