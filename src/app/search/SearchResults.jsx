@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { searchProducts } from "../../queries/search";
-import { calculateFinalPrice } from "../../utils/price";
+import { computeItemPrice } from "../../utils/computeItemPrice";
 import { formatIndianCurrency } from "../../utils/formatIndianCurrency";
 import Image from "next/image";
 
@@ -23,69 +23,24 @@ export default function SearchResultsPage() {
     if (query) performSearch();
   }, [query]);
 
-  const calculateProductPrice = async (description, selectedKarat = "10K", pricing = null) => {
-    try {
-      const diamondShapeMatch = description.match(
-        /Diamond Shape:\s*([A-Za-z,\s]+?)(?=Total Diamonds|Diamond Weight|$)/i,
-      );
-      const totalDiamondsMatch = description.match(
-        /Total Diamonds:\s*([\d,\s]+?)(?=Diamond Weight|Total Diamond Weight|Metal Weights|$)/i,
-      );
-      const diamondWeightMatch = description.match(
-        /Diamond Weight:\s*([\d.,\s]+?)(?=Total Diamond Weight|Metal Weights|$)/i,
-      );
-
-      const diamondShapes = diamondShapeMatch
-        ? diamondShapeMatch[1].trim().split(",").map((s) => s.trim()).filter((s) => s)
-        : [];
-
-      const diamondCounts = totalDiamondsMatch
-        ? totalDiamondsMatch[1].trim().split(",").map((s) => s.trim()).filter((s) => s && !isNaN(s)).map((c) => parseInt(c))
-        : [];
-
-      const diamondWeights = diamondWeightMatch
-        ? diamondWeightMatch[1].trim().split(",").map((s) => s.trim()).filter((s) => s && !isNaN(s)).map((w) => parseFloat(w))
-        : [];
-
-      // Prefer DB gold weight, fall back to HTML parsing
-      const karatNum = parseInt(selectedKarat);
-      let goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;
-      if (!goldWeight) {
-        const goldWeightMatch = description.match(new RegExp(`${selectedKarat} Gold:\\s*([\\d.]+)g`, "i"));
-        goldWeight = goldWeightMatch ? parseFloat(goldWeightMatch[1]) : 0;
-      }
-
-      const diamonds = diamondShapes.map((shape, i) => ({
-        shape,
-        weight: diamondWeights[i] || 0,
-        count: diamondCounts[i] || 0,
-      }));
-
-      const result = await calculateFinalPrice({ diamonds, goldWeight, goldKarat: selectedKarat });
-      return result.totalPrice;
-    } catch (error) {
-      console.error("Error calculating price:", error);
-      return 0;
-    }
-  };
-
   const performSearch = async () => {
     try {
       setLoading(true);
       const response = await searchProducts(query, 50);
 
       if (response?.products?.edges) {
-        // Transform products with price calculation
         const transformedProducts = await Promise.all(
           response.products.edges.map(async ({ node: product }) => {
             const firstVariant = product.variants?.edges?.[0]?.node;
+            const pricing = product.pricing || null;
+            const descriptionHtml = product.descriptionHtml || null;
 
-            // Calculate actual price using pricing logic
-            const calculatedPrice = await calculateProductPrice(
-              product.description || "",
-              "10K",
-              product.pricing || null,
-            );
+            // Use same pricing path as product detail + collection pages
+            let calculatedPrice = 0;
+            try {
+              const result = await computeItemPrice(pricing, descriptionHtml, "10K");
+              if (result?.totalPrice) calculatedPrice = result.totalPrice;
+            } catch {}
 
             return {
               id: product.id,

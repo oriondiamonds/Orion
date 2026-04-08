@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { calculateFinalPrice } from "../utils/price";
+import { computeItemPrice } from "../utils/computeItemPrice";
 import { formatIndianCurrency } from "../utils/formatIndianCurrency";
 
 export default function CartItemPriceBreakup({ item, appliedCoupon, cartSubtotal }) {
@@ -21,61 +21,20 @@ export default function CartItemPriceBreakup({ item, appliedCoupon, cartSubtotal
     }
 
     async function computePrice() {
-      if (!item.descriptionHtml) return;
+      if (!item.descriptionHtml && !item.pricing) return;
       setLoading(true);
 
       try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(item.descriptionHtml, "text/html");
-        const liElements = doc.querySelectorAll(".product-description ul li");
-
-        const specMap = {};
-        liElements.forEach((li) => {
-          const key = li
-            .querySelector("strong")
-            ?.textContent.replace(":", "")
-            .trim();
-          const value = li.textContent
-            .replace(li.querySelector("strong")?.textContent || "", "")
-            .trim();
-          if (key && value) specMap[key] = value;
-        });
-
-        // Extract diamond data
-        const shapes =
-          specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
-        const weights =
-          specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
-        const countRaw = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
-        const counts = countRaw.split(",").map((v) => v.trim());
-
-        const diamonds = shapes.map((shape, i) => ({
-          shape,
-          weight: parseFloat(weights[i]) || 0,
-          count: parseInt(counts[i]) || 0,
-        }));
-
-        // Extract gold info
         const selectedKarat =
-          item.selectedOptions?.find((opt) => opt.name === "Gold Karat")
-            ?.value || "18K";
-        const karatNum = parseInt(selectedKarat);
-        // Prefer DB weight (accurate total), fall back to HTML
-        const goldWeight =
-          Number(item.pricing?.[`weight_${karatNum}k`]) ||
-          (() => {
-            const goldWeightKey = Object.keys(specMap).find((key) =>
-              key.toLowerCase().includes(selectedKarat.toLowerCase())
-            );
-            return parseFloat(specMap[goldWeightKey]) || 0;
-          })();
+          item.selectedOptions?.find((opt) => opt.name === "Gold Karat")?.value || "18K";
 
-        // Calculate
-        const result = await calculateFinalPrice({
-          diamonds,
-          goldWeight,
-          goldKarat: selectedKarat,
-        });
+        // Use same pricing path as product detail + collection pages
+        const result = await computeItemPrice(item.pricing || null, item.descriptionHtml || null, selectedKarat);
+
+        if (!result) {
+          setLoading(false);
+          return;
+        }
 
         setPriceData(result);
 
