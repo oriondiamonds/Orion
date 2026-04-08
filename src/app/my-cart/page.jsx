@@ -68,9 +68,10 @@ export default function CartPage() {
         })
       );
 
-      // For items missing priceBreakdown, compute it now so coupon validation works
+      // Recompute price if breakdown is missing OR was computed more than 1 hour ago
+      const PRICE_TTL_MS = 60 * 60 * 1000;
       const itemsNeedingBreakdown = enrichedItems.filter(
-        (item) => !item.priceBreakdown
+        (item) => !item.priceBreakdown || !item.pricedAt || Date.now() - item.pricedAt > PRICE_TTL_MS
       );
 
       let finalItems = enrichedItems;
@@ -110,6 +111,7 @@ export default function CartPage() {
               calculatedPrice: computed.totalPrice,
               price: computed.totalPrice,
               priceBreakdown: computed,
+              pricedAt: Date.now(),
             };
           });
 

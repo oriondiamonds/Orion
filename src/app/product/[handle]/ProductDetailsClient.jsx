@@ -174,6 +174,7 @@ export default function ProductDetails() {
       quantity: quantity,
       selectedOptions: finalSelectedOptions,
       priceBreakdown: priceBreakdown || null,
+      pricedAt: Date.now(),
     };
 
     // ----- MERGE LOGIC -----
@@ -289,6 +290,7 @@ export default function ProductDetails() {
       quantity: quantity,
       selectedOptions: finalSelectedOptions,
       priceBreakdown: priceBreakdown || null,
+      pricedAt: Date.now(),
     };
 
     sessionStorage.setItem("buyNowItem", JSON.stringify(buyNowItem));
