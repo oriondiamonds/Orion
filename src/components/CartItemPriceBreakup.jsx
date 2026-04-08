@@ -59,10 +59,16 @@ export default function CartItemPriceBreakup({ item, appliedCoupon, cartSubtotal
         const selectedKarat =
           item.selectedOptions?.find((opt) => opt.name === "Gold Karat")
             ?.value || "18K";
-        const goldWeightKey = Object.keys(specMap).find((key) =>
-          key.toLowerCase().includes(selectedKarat.toLowerCase())
-        );
-        const goldWeight = parseFloat(specMap[goldWeightKey]) || 0;
+        const karatNum = parseInt(selectedKarat);
+        // Prefer DB weight (accurate total), fall back to HTML
+        const goldWeight =
+          Number(item.pricing?.[`weight_${karatNum}k`]) ||
+          (() => {
+            const goldWeightKey = Object.keys(specMap).find((key) =>
+              key.toLowerCase().includes(selectedKarat.toLowerCase())
+            );
+            return parseFloat(specMap[goldWeightKey]) || 0;
+          })();
 
         // Calculate
         const result = await calculateFinalPrice({

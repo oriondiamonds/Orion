@@ -85,7 +85,8 @@ const parseDescription = (description) => {
  */
 export const calculateProductPrice = async (
   description,
-  selectedKarat = "10K"
+  selectedKarat = "10K",
+  pricing = null
 ) => {
   try {
     // Create cache key
@@ -116,16 +117,16 @@ export const calculateProductPrice = async (
       count: parseInt(counts[i]) || 0,
     }));
 
-    // Extract gold weight
-    const goldWeightKey = Object.keys(specMap).find((key) =>
-      key.toLowerCase().includes(selectedKarat.toLowerCase())
-    );
-
-    let goldWeight = 0;
-    if (goldWeightKey && specMap[goldWeightKey]) {
-      // Remove 'g' or 'gm' suffix and parse
-      goldWeight =
-        parseFloat(specMap[goldWeightKey].replace(/g|gm/gi, "").trim()) || 0;
+    // Gold weight — prefer DB pricing, fall back to HTML parsing
+    const karatNum = parseInt(selectedKarat);
+    let goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;
+    if (!goldWeight) {
+      const goldWeightKey = Object.keys(specMap).find((key) =>
+        key.toLowerCase().includes(selectedKarat.toLowerCase())
+      );
+      if (goldWeightKey && specMap[goldWeightKey]) {
+        goldWeight = parseFloat(specMap[goldWeightKey].replace(/g|gm/gi, "").trim()) || 0;
+      }
     }
 
     console.log("Extracted data:", {

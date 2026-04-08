@@ -174,7 +174,8 @@ export async function fetchSearchProducts(query, limit = 50) {
       variants:product_variants(
         *,
         selected_options:variant_selected_options(*)
-      )
+      ),
+      pricing:product_prices(*)
     `
     )
     .textSearch("search_vector", query, {
@@ -182,6 +183,13 @@ export async function fetchSearchProducts(query, limit = 50) {
       config: "english",
     })
     .limit(limit);
+
+  // Flatten pricing array to single object (same shape as getProductByHandle)
+  if (products) {
+    products.forEach((p) => {
+      p.pricing = Array.isArray(p.pricing) ? p.pricing[0] || null : p.pricing;
+    });
+  }
 
   if (error) {
     console.error("Error searching products:", error.message);
