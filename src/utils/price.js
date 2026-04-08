@@ -36,8 +36,10 @@ async function getPricingConfig() {
   log("🔄 [PRICING CONFIG] Fetching FRESH config from API...");
 
   try {
-    // Use internal API route
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    // Use relative URL in browser (always same-origin); absolute on server
+    const baseUrl = typeof window !== "undefined"
+      ? ""
+      : (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000");
     const apiUrl = `${baseUrl}/api/pricing-config`;
     log("🌐 API URL:", apiUrl);
 
@@ -135,8 +137,10 @@ async function getGoldPrice() {
   log("🔄 [GOLD PRICE] Fetching FRESH gold price from API...");
 
   try {
-    // Use internal API route
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    // Use relative URL in browser (always same-origin); absolute on server
+    const baseUrl = typeof window !== "undefined"
+      ? ""
+      : (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000");
     const apiUrl = `${baseUrl}/api/gold-price`;
     log("🌐 Gold Price API URL:", apiUrl);
 

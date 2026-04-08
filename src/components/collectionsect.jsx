@@ -82,23 +82,33 @@ export default function CollectionSection({ id, title, items = [] }) {
     return () => window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
   }, []);
 
-  // Compute live prices for all collection products, cached for 1 hour in localStorage
+  // Compute live prices for all collection products, cached in localStorage
   useEffect(() => {
     if (!items.length) return;
 
-    const CACHE_KEY = "orion_live_prices_v1";
+    const CACHE_KEY = "orion_live_prices_v2";
     const TTL = 10 * 60 * 1000; // 10 minutes
 
     async function computeLivePrices() {
+      // Fetch current pricing config version first — used to detect stale cache
+      let configVersion = null;
+      try {
+        const cfgRes = await fetch("/api/pricing-config", { cache: "no-store" });
+        const cfg = await cfgRes.json();
+        configVersion = cfg.lastUpdated || null;
+      } catch {}
+
       let existingPrices = {};
       let cacheStale = true;
 
-      // Load cache — even if fresh, check for items missing from it
+      // Load cache — treat as stale if pricing config changed since last cache write
       try {
         const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
         if (cached) {
           existingPrices = cached.prices || {};
-          cacheStale = Date.now() - cached.timestamp >= TTL;
+          const timeStale = Date.now() - cached.timestamp >= TTL;
+          const configChanged = configVersion && cached.configVersion !== configVersion;
+          cacheStale = timeStale || configChanged;
         }
       } catch {}
 
@@ -150,10 +160,10 @@ export default function CollectionSection({ id, title, items = [] }) {
       const allPrices = { ...existingPrices, ...newPrices };
 
       try {
-        // Only reset timestamp if we did a full refresh; preserve it for partial fills
+        const prevEntry = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
         const cacheEntry = cacheStale
-          ? { timestamp: Date.now(), prices: allPrices }
-          : { timestamp: JSON.parse(localStorage.getItem(CACHE_KEY) || "null")?.timestamp || Date.now(), prices: allPrices };
+          ? { timestamp: Date.now(), configVersion, prices: allPrices }
+          : { timestamp: prevEntry?.timestamp || Date.now(), configVersion, prices: allPrices };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheEntry));
       } catch {}
 
