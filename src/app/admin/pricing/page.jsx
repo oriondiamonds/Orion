@@ -472,41 +472,80 @@ export default function AdminPricingPortal() {
               {config?.diamondMargins?.baseFees?.description ||
                 "Flat fees added to total diamond price"}
             </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fee 1 (₹)
+                  IGI Cert — sub-1ct stones (₹)
                 </label>
                 <input
                   type="number"
                   step="10"
                   min="0"
-                  value={config?.diamondMargins?.baseFees?.fee1 ?? ""}
+                  value={config?.diamondMargins?.baseFees?.igiCertBelow1ct ?? ""}
                   onChange={(e) =>
                     updateConfigValue(
-                      "diamondMargins.baseFees.fee1",
+                      "diamondMargins.baseFees.igiCertBelow1ct",
                       e.target.value,
                     )
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a1833] focus:border-transparent"
                 />
+                <p className="text-xs text-gray-400 mt-1">Applied once per product if any stone &lt; 1ct</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fee 2 (₹)
+                  Base Fixed Fee (₹)
                 </label>
                 <input
                   type="number"
                   step="10"
                   min="0"
-                  value={config?.diamondMargins?.baseFees?.fee2 ?? ""}
+                  value={config?.diamondMargins?.baseFees?.baseFixed ?? ""}
                   onChange={(e) =>
                     updateConfigValue(
-                      "diamondMargins.baseFees.fee2",
+                      "diamondMargins.baseFees.baseFixed",
                       e.target.value,
                     )
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a1833] focus:border-transparent"
+                />
+                <p className="text-xs text-gray-400 mt-1">Applied to every product</p>
+              </div>
+            </div>
+            <p className="text-sm font-medium text-gray-700 mb-3">Category Fees (₹)</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {["ring", "earrings", "pendant", "necklace", "bracelet"].map((cat) => (
+                <div key={cat}>
+                  <label className="block text-xs font-medium text-gray-600 mb-1 capitalize">{cat}</label>
+                  <input
+                    type="number"
+                    step="10"
+                    min="0"
+                    value={config?.diamondMargins?.baseFees?.categoryFees?.[cat] ?? ""}
+                    onChange={(e) =>
+                      updateConfigValue(
+                        `diamondMargins.baseFees.categoryFees.${cat}`,
+                        e.target.value,
+                      )
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a1833] focus:border-transparent text-sm"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Default (others)</label>
+                <input
+                  type="number"
+                  step="10"
+                  min="0"
+                  value={config?.diamondMargins?.baseFees?.categoryDefault ?? ""}
+                  onChange={(e) =>
+                    updateConfigValue(
+                      "diamondMargins.baseFees.categoryDefault",
+                      e.target.value,
+                    )
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a1833] focus:border-transparent text-sm"
                 />
               </div>
             </div>
@@ -521,85 +560,49 @@ export default function AdminPricingPortal() {
 
           <div className="space-y-4">
             <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-800 mb-1">
-                Gold Weight &lt; 2g
-              </h3>
+              <h3 className="font-semibold text-gray-800 mb-1">Rate per Gram (₹)</h3>
               <p className="text-sm text-gray-500 mb-4">
-                {config?.makingCharges?.lessThan2g?.description}
+                {config?.makingCharges?.description || "Flat rate applied regardless of gold weight"}
               </p>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rate per Gram (₹)
-                </label>
-                <input
-                  type="number"
-                  step="10"
-                  min="0"
-                  value={config?.makingCharges?.lessThan2g?.ratePerGram ?? ""}
-                  onChange={(e) =>
-                    updateConfigValue(
-                      "makingCharges.lessThan2g.ratePerGram",
-                      e.target.value,
-                    )
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a1833] focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-800 mb-1">
-                Gold Weight ≥ 2g
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {config?.makingCharges?.greaterThan2g?.description}
-              </p>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rate per Gram (₹)
-                </label>
-                <input
-                  type="number"
-                  step="10"
-                  min="0"
-                  value={
-                    config?.makingCharges?.greaterThan2g?.ratePerGram ?? ""
-                  }
-                  onChange={(e) =>
-                    updateConfigValue(
-                      "makingCharges.greaterThan2g.ratePerGram",
-                      e.target.value,
-                    )
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a1833] focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-800 mb-1">
-                Final Multiplier
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {config?.makingCharges?.description}
-              </p>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Multiplier
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={config?.makingCharges?.multiplier ?? ""}
-                  onChange={(e) =>
-                    updateConfigValue(
-                      "makingCharges.multiplier",
-                      e.target.value,
-                    )
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a1833] focus:border-transparent"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Rate per Gram (₹)
+                  </label>
+                  <input
+                    type="number"
+                    step="10"
+                    min="0"
+                    value={
+                      config?.makingCharges?.ratePerGram ??
+                      config?.makingCharges?.lessThan2g?.ratePerGram ??
+                      ""
+                    }
+                    onChange={(e) =>
+                      updateConfigValue("makingCharges.ratePerGram", e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a1833] focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">e.g. ₹950/g</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Multiplier
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    value={config?.makingCharges?.multiplier ?? ""}
+                    onChange={(e) =>
+                      updateConfigValue("makingCharges.multiplier", e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a1833] focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Final = weight × rate × multiplier (e.g. 1.75)
+                  </p>
+                </div>
               </div>
             </div>
           </div>
