@@ -1,8 +1,15 @@
 // src/utils/price.js
 
-// Set DEBUG_PRICING=true in .env.local to enable verbose price calculation logs
+// Always log in the browser (visible in DevTools console).
+// On the server, only log if DEBUG_PRICING=true in .env.
 const DEBUG = process.env.DEBUG_PRICING === "true";
-const log = (...args) => DEBUG && console.log(...args);
+const log = (...args) => {
+  if (typeof window !== "undefined") {
+    console.log(...args);          // always visible in browser DevTools
+  } else if (DEBUG) {
+    console.log(...args);          // server: opt-in via DEBUG_PRICING=true
+  }
+};
 
 // Cache for pricing config
 let cachedConfig = null;
