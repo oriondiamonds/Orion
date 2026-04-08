@@ -3,28 +3,17 @@ import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 
 // In-memory cache
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
 let priceCache = {
   price: null,
   lastFetchDate: null,
+  lastFetchTime: null,
 };
 
 function shouldFetchPrice() {
-  const now = new Date();
-  const istTime = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-  );
-  const currentDate = istTime.toISOString().split("T")[0];
-  const currentHour = istTime.getHours();
-
-  if (!priceCache.lastFetchDate) {
-    return true;
-  }
-
-  if (currentDate > priceCache.lastFetchDate && currentHour >= 8) {
-    return true;
-  }
-
-  return false;
+  if (!priceCache.price || !priceCache.lastFetchTime) return true;
+  return Date.now() - priceCache.lastFetchTime > CACHE_TTL_MS;
 }
 
 // Fetch from Navkar Gold's real API endpoint
@@ -168,6 +157,7 @@ async function updatePriceCache() {
     priceCache = {
       price: price,
       lastFetchDate: istTime.toISOString().split("T")[0],
+      lastFetchTime: Date.now(),
     };
 
     console.log(`✅ CACHE UPDATED: ₹${price.toFixed(2)}/gram`);
@@ -202,7 +192,7 @@ export async function GET() {
       unit: "INR per gram",
       date: priceCache.lastFetchDate,
       lastUpdated: istTime.toISOString(),
-      nextUpdate: "Tomorrow at 8:00 AM IST",
+      nextUpdate: "Refreshes every hour automatically",
     });
   } catch (error) {
     console.error("❌ GET endpoint error:", error.message);
@@ -232,7 +222,7 @@ export async function POST() {
       unit: "INR per gram",
       date: priceCache.lastFetchDate,
       lastUpdated: istTime.toISOString(),
-      nextUpdate: "Tomorrow at 8:00 AM IST",
+      nextUpdate: "Refreshes every hour automatically",
     });
   } catch (error) {
     console.error("❌ POST endpoint error:", error.message);
