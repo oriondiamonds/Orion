@@ -67,157 +67,60 @@ export default function PriceBreakup({
         return;
       }
 
-      // Use synced product_prices data if available (live mode)
-      // ⚠️  NOTE: This mode does NOT use your dynamic pricing config!
-      if (pricing && pricing[`weight_${karatNum}k`] && false) { // diamond price now calculated dynamically, not from DB
-        console.log("\n💻 [MODE: LIVE PRICING FROM SYNCED DATA]");
-        console.log(
-          "  ⚠️  WARNING: This mode uses SYNCED data, NOT dynamic config!",
-        );
-        console.log(
-          "  Diamond multiplier changes in config will NOT affect prices",
-        );
-        console.log(
-          "  To use updated config, delete synced fields or use fallback mode",
-        );
-        console.log("  Using synced product_prices data");
-
-        try {
-          const weightK = Number(pricing[`weight_${karatNum}k`]) || 0;
-          const diamondPrice = Math.round(Number(pricing.diamond_price) || 0);
-
-          console.log(`  Gold Weight (${karatNum}K): ${weightK}g`);
-          console.log(`  Diamond Price (synced): ₹${diamondPrice}`);
-
-          // Fetch live 24K gold rate from Groww
-          let gold24Price = 8500; // fallback
-          console.log(`\n  💰 Fetching live 24K gold price...`);
-
-          try {
-            const goldRes = await fetch("/api/gold-price");
-            const goldData = await goldRes.json();
-
-            console.log(`  API Response:`, goldData);
-
-            if (goldData.success && goldData.price) {
-              gold24Price = goldData.price;
-              console.log(`  ✅ Live 24K Gold Price: ₹${gold24Price}/gram`);
-            } else {
-              console.log(
-                `  ⚠️  API unsuccessful, using fallback: ₹${gold24Price}/gram`,
-              );
-            }
-          } catch (e) {
-            console.warn(`  ❌ Gold price fetch failed:`, e.message);
-            console.log(`  ⚠️  Using fallback: ₹${gold24Price}/gram`);
-          }
-
-          const karatRate = gold24Price * (karatNum / 24);
-          console.log(
-            `  ${karatNum}K Rate: ₹${gold24Price} × (${karatNum}/24) = ₹${karatRate.toFixed(2)}/gram`,
-          );
-
-          const rawGoldPrice = karatRate * weightK;
-          console.log(
-            `  Gold Price Calculation: ₹${karatRate.toFixed(2)} × ${weightK}g = ₹${rawGoldPrice.toFixed(2)}`,
-          );
-
-          const makingChargeMultiplied = weightK * 950 * 1.75; // flat ₹950/g × 1.75
-
-          console.log(`\n  🔨 Making Charges:`);
-          console.log(`     Rate Per Gram: ₹950/gram (flat)`);
-          console.log(`     Before Multiplier: ${weightK} × 950 = ₹${weightK * 950}`);
-          console.log(`     After Multiplier (×1.75): ₹${weightK * 950} × 1.75 = ₹${makingChargeMultiplied}`);
-
-          const subtotal = Math.round(
-            diamondPrice + rawGoldPrice + makingChargeMultiplied,
-          );
-          const goldPrice = Math.round(rawGoldPrice);
-          const makingCharge = Math.round(makingChargeMultiplied);
-          const gst = Math.round(subtotal * 0.03);
-          const totalPrice = subtotal + gst;
-
-          const result = {
-            diamondPrice,
-            goldPrice,
-            makingCharge,
-            subtotal,
-            gst,
-            totalPrice,
-          };
-
-          console.log("\n✅ [LIVE PRICING RESULT]");
-          console.log(JSON.stringify(result, null, 2));
-
-          setPriceData(result);
-          setLoading(false);
-          return;
-        } catch (e) {
-          console.warn("⚠️  [LIVE PRICING] Calculation failed:", e.message);
-          console.log("  Falling back to HTML parsing and calculation...");
-        }
-      }
-
-      // Fallback: parse HTML and calculate client-side
-      if (!descriptionHtml) {
-        console.log(
-          "\n❌ [FALLBACK] No descriptionHtml available - cannot calculate",
-        );
+      // No description available and no DB diamond data — cannot calculate
+      if (!descriptionHtml && !pricing?.diamond_shapes) {
+        console.log("\n❌ No diamond data available — cannot calculate");
         setLoading(false);
         return;
       }
 
-      console.log("\n🔄 [MODE: FALLBACK - HTML PARSING & DYNAMIC CALCULATION]");
-      console.log("  Parsing descriptionHtml and using calculateFinalPrice()");
+      console.log("\n🔄 [MODE: DYNAMIC CALCULATION]");
       console.log("  This mode USES your dynamic pricing config ✅");
-
-      // Clear caches to ensure fresh config
-      console.log("  🗑️  Clearing all caches for fresh config...");
       clearAllCaches();
 
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(descriptionHtml, "text/html");
-      const liElements = doc.querySelectorAll(".product-description ul li");
-
-      console.log(`  Found ${liElements.length} specification items`);
-
-      const specMap = {};
-      liElements.forEach((li) => {
-        const key = li
-          .querySelector("strong")
-          ?.textContent.replace(":", "")
-          .trim();
-        const value = li.textContent
-          .replace(li.querySelector("strong")?.textContent || "", "")
-          .trim();
-        if (key && value) {
-          specMap[key] = value;
-          console.log(`    ✓ ${key}: ${value}`);
-        }
-      });
-
-      // extract diamond data
-      const shapes =
-        specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
-      const weights =
-        specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
-      const countRaw = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
-      const counts = countRaw.split(",").map((v) => v.trim());
-
-      const diamonds = shapes.map((shape, i) => ({
-        shape,
-        weight: parseFloat(weights[i]) || 0,
-        count: parseInt(counts[i]) || 0,
-      }));
-
-      console.log(`\n  💎 Extracted Diamond Data:`);
-      console.log(JSON.stringify(diamonds, null, 4));
-
-      // gold weight from product_prices (always correct total weight for the product)
+      // Gold weight from DB
       const goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;
+      console.log(`\n  ⭐ Gold Weight (${selectedKarat}): ${goldWeight}g`);
 
-      console.log(`\n  ⭐ Extracted Gold Data:`);
-      console.log(`     Weight (${selectedKarat}): ${goldWeight}g`);
+      let diamonds = [];
+
+      // Prefer structured DB columns — more reliable than HTML parsing
+      if (pricing?.diamond_shapes && pricing?.diamond_weight && pricing?.total_diamonds) {
+        console.log("  💎 Reading diamond data from DB columns");
+        const shapes  = pricing.diamond_shapes.split(",").map((v) => v.trim()).filter(Boolean);
+        const weights = pricing.diamond_weight.split(",").map((v) => v.trim());
+        const counts  = pricing.total_diamonds.split(",").map((v) => v.trim());
+        diamonds = shapes.map((shape, i) => ({
+          shape,
+          weight: parseFloat(weights[i]) || 0,
+          count:  parseInt(counts[i])    || 0,
+        })).filter((d) => d.weight > 0 && d.count > 0);
+      }
+
+      // Fall back to HTML parsing if DB columns missing
+      if (!diamonds.length && descriptionHtml) {
+        console.log("  💎 DB columns empty — falling back to HTML parsing");
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(descriptionHtml, "text/html");
+        const liElements = doc.querySelectorAll(".product-description ul li");
+        const specMap = {};
+        liElements.forEach((li) => {
+          const key = li.querySelector("strong")?.textContent.replace(":", "").trim();
+          const value = li.textContent.replace(li.querySelector("strong")?.textContent || "", "").trim();
+          if (key && value) { specMap[key] = value; console.log(`    ✓ ${key}: ${value}`); }
+        });
+        const shapes  = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
+        const weights = specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
+        const countRaw = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
+        const counts   = countRaw.split(",").map((v) => v.trim());
+        diamonds = shapes.map((shape, i) => ({
+          shape,
+          weight: parseFloat(weights[i]) || 0,
+          count:  parseInt(counts[i])    || 0,
+        })).filter((d) => d.weight > 0 && d.count > 0);
+      }
+
+      console.log(`\n  💎 Diamond Data:`, JSON.stringify(diamonds));
 
       // calculate
       console.log(

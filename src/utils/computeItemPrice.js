@@ -24,7 +24,7 @@ export async function computeItemPrice(pricing, descriptionHtml, selectedKarat) 
   const karatNum = parseInt(selectedKarat);
 
   // Mode 2: Live pricing from synced weight data (always preferred)
-  if (false && pricing?.diamond_price && pricing[`weight_${karatNum}k`]) { // diamond price now calculated dynamically
+  if (false) { // Mode 2 removed — diamond price now calculated dynamically via Mode 3
     const weightK = Number(pricing[`weight_${karatNum}k`]);
     const diamondPrice = Math.round(Number(pricing.diamond_price));
     const gold24Price = await fetchGoldPrice();
@@ -42,37 +42,51 @@ export async function computeItemPrice(pricing, descriptionHtml, selectedKarat) 
     return { diamondPrice, goldPrice, makingCharge, subtotal, gst, totalPrice };
   }
 
-  // Mode 3: Fallback — parse HTML description and use calculateFinalPrice()
-  if (descriptionHtml) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(descriptionHtml, "text/html");
-    const liElements = doc.querySelectorAll(".product-description ul li");
-    const specMap = {};
-    liElements.forEach((li) => {
-      const key = li.querySelector("strong")?.textContent.replace(":", "").trim();
-      const value = li.textContent
-        .replace(li.querySelector("strong")?.textContent || "", "")
-        .trim();
-      if (key && value) specMap[key] = value;
-    });
-
-    const shapes  = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
-    // Per-stone weight (Diam Wt) — comma-separated per shape
-    const weights = specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
-    // Per-shape count (Diamond Count) — preferred; fallback to grand total Total Diamonds
-    const countRaw = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
-    const counts   = countRaw.split(",").map((v) => v.trim());
-    const diamonds = shapes.map((shape, i) => ({
-      shape,
-      weight: parseFloat(weights[i]) || 0,
-      count:  parseInt(counts[i])    || 0,
-    }));
-
+  // Mode 3: Build diamonds from DB structured columns (preferred) or HTML fallback
+  {
     const karatNum = parseInt(selectedKarat);
     const goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;
 
-    const result = await calculateFinalPrice({ diamonds, goldWeight, goldKarat: selectedKarat });
-    if (result) return result;
+    let diamonds = [];
+
+    // Prefer structured DB columns — avoids HTML parsing errors
+    if (pricing?.diamond_shapes && pricing?.diamond_weight && pricing?.total_diamonds) {
+      const shapes  = pricing.diamond_shapes.split(",").map((v) => v.trim()).filter(Boolean);
+      const weights = pricing.diamond_weight.split(",").map((v) => v.trim());
+      const counts  = pricing.total_diamonds.split(",").map((v) => v.trim());
+      diamonds = shapes.map((shape, i) => ({
+        shape,
+        weight: parseFloat(weights[i]) || 0,
+        count:  parseInt(counts[i])    || 0,
+      })).filter((d) => d.weight > 0 && d.count > 0);
+    }
+
+    // Fall back to HTML parsing if DB columns missing/empty
+    if (!diamonds.length && descriptionHtml) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(descriptionHtml, "text/html");
+      const liElements = doc.querySelectorAll(".product-description ul li");
+      const specMap = {};
+      liElements.forEach((li) => {
+        const key = li.querySelector("strong")?.textContent.replace(":", "").trim();
+        const value = li.textContent.replace(li.querySelector("strong")?.textContent || "", "").trim();
+        if (key && value) specMap[key] = value;
+      });
+      const shapes  = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
+      const weights = specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
+      const countRaw = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
+      const counts   = countRaw.split(",").map((v) => v.trim());
+      diamonds = shapes.map((shape, i) => ({
+        shape,
+        weight: parseFloat(weights[i]) || 0,
+        count:  parseInt(counts[i])    || 0,
+      })).filter((d) => d.weight > 0 && d.count > 0);
+    }
+
+    if (diamonds.length > 0 || goldWeight > 0) {
+      const result = await calculateFinalPrice({ diamonds, goldWeight, goldKarat: selectedKarat });
+      if (result) return result;
+    }
   }
 
   // Mode 1: Fixed pricing — last resort when no live data is available
