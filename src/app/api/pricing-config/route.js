@@ -152,26 +152,20 @@ export async function POST(request) {
       );
     }
 
-    // Get the singleton row ID
-    const { data: existing, error: fetchError } = await supabaseAdmin
-      .from("pricing_config")
-      .select("id")
-      .limit(1)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    // Update the singleton row
+    // Upsert singleton row (handles both create and update)
     const { data, error: updateError } = await supabaseAdmin
       .from("pricing_config")
-      .update({
-        diamond_margins: newConfig.diamondMargins,
-        making_charges: newConfig.makingCharges,
-        gst_rate: newConfig.gstRate ?? DEFAULT_CONFIG.gstRate,
-        last_updated: new Date().toISOString(),
-        updated_by: updatedBy || "admin",
-      })
-      .eq("id", existing.id)
+      .upsert(
+        {
+          id: 1, // singleton
+          diamond_margins: newConfig.diamondMargins,
+          making_charges: newConfig.makingCharges,
+          gst_rate: newConfig.gstRate ?? DEFAULT_CONFIG.gstRate,
+          last_updated: new Date().toISOString(),
+          updated_by: updatedBy || "admin",
+        },
+        { onConflict: "id" }
+      )
       .select("*")
       .single();
 

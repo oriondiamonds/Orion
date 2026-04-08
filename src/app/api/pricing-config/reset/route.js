@@ -84,29 +84,23 @@ export async function POST(request) {
 
     console.log("✅ Password verified, resetting to defaults");
 
-    // Get the singleton row ID
-    const { data: existing, error: fetchError } = await supabaseAdmin
-      .from("pricing_config")
-      .select("id")
-      .limit(1)
-      .single();
-
-    if (fetchError) throw fetchError;
-
     const now = new Date().toISOString();
     const resetUpdatedBy = updatedBy || "admin (reset)";
 
-    // Update to defaults
+    // Upsert singleton row with defaults (handles both create and update)
     const { error: updateError } = await supabaseAdmin
       .from("pricing_config")
-      .update({
-        diamond_margins: DEFAULT_CONFIG.diamondMargins,
-        making_charges: DEFAULT_CONFIG.makingCharges,
-        gst_rate: DEFAULT_CONFIG.gstRate,
-        last_updated: now,
-        updated_by: resetUpdatedBy,
-      })
-      .eq("id", existing.id);
+      .upsert(
+        {
+          id: 1,
+          diamond_margins: DEFAULT_CONFIG.diamondMargins,
+          making_charges: DEFAULT_CONFIG.makingCharges,
+          gst_rate: DEFAULT_CONFIG.gstRate,
+          last_updated: now,
+          updated_by: resetUpdatedBy,
+        },
+        { onConflict: "id" }
+      );
 
     if (updateError) throw updateError;
 
