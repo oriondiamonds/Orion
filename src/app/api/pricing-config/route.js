@@ -152,22 +152,35 @@ export async function POST(request) {
       );
     }
 
-    // Upsert singleton row (handles both create and update)
-    const { data, error: updateError } = await supabaseAdmin
+    // Get existing singleton row (if any)
+    const { data: rows } = await supabaseAdmin
       .from("pricing_config")
-      .upsert(
-        {
-          id: 1, // singleton
-          diamond_margins: newConfig.diamondMargins,
-          making_charges: newConfig.makingCharges,
-          gst_rate: newConfig.gstRate ?? DEFAULT_CONFIG.gstRate,
-          last_updated: new Date().toISOString(),
-          updated_by: updatedBy || "admin",
-        },
-        { onConflict: "id" }
-      )
-      .select("*")
-      .single();
+      .select("id")
+      .limit(1);
+
+    const payload = {
+      diamond_margins: newConfig.diamondMargins,
+      making_charges: newConfig.makingCharges,
+      gst_rate: newConfig.gstRate ?? DEFAULT_CONFIG.gstRate,
+      last_updated: new Date().toISOString(),
+      updated_by: updatedBy || "admin",
+    };
+
+    let data, updateError;
+    if (rows?.length) {
+      ({ data, error: updateError } = await supabaseAdmin
+        .from("pricing_config")
+        .update(payload)
+        .eq("id", rows[0].id)
+        .select("*")
+        .single());
+    } else {
+      ({ data, error: updateError } = await supabaseAdmin
+        .from("pricing_config")
+        .insert(payload)
+        .select("*")
+        .single());
+    }
 
     if (updateError) throw updateError;
 

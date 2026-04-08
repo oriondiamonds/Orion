@@ -87,20 +87,30 @@ export async function POST(request) {
     const now = new Date().toISOString();
     const resetUpdatedBy = updatedBy || "admin (reset)";
 
-    // Upsert singleton row with defaults (handles both create and update)
-    const { error: updateError } = await supabaseAdmin
+    const { data: rows } = await supabaseAdmin
       .from("pricing_config")
-      .upsert(
-        {
-          id: 1,
-          diamond_margins: DEFAULT_CONFIG.diamondMargins,
-          making_charges: DEFAULT_CONFIG.makingCharges,
-          gst_rate: DEFAULT_CONFIG.gstRate,
-          last_updated: now,
-          updated_by: resetUpdatedBy,
-        },
-        { onConflict: "id" }
-      );
+      .select("id")
+      .limit(1);
+
+    const payload = {
+      diamond_margins: DEFAULT_CONFIG.diamondMargins,
+      making_charges: DEFAULT_CONFIG.makingCharges,
+      gst_rate: DEFAULT_CONFIG.gstRate,
+      last_updated: now,
+      updated_by: resetUpdatedBy,
+    };
+
+    let updateError;
+    if (rows?.length) {
+      ({ error: updateError } = await supabaseAdmin
+        .from("pricing_config")
+        .update(payload)
+        .eq("id", rows[0].id));
+    } else {
+      ({ error: updateError } = await supabaseAdmin
+        .from("pricing_config")
+        .insert(payload));
+    }
 
     if (updateError) throw updateError;
 
