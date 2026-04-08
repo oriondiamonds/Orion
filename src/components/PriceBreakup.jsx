@@ -69,7 +69,7 @@ export default function PriceBreakup({
 
       // Use synced product_prices data if available (live mode)
       // ⚠️  NOTE: This mode does NOT use your dynamic pricing config!
-      if (pricing && pricing.diamond_price && pricing[`weight_${karatNum}k`]) {
+      if (pricing && pricing[`weight_${karatNum}k`] && false) { // diamond price now calculated dynamically, not from DB
         console.log("\n💻 [MODE: LIVE PRICING FROM SYNCED DATA]");
         console.log(
           "  ⚠️  WARNING: This mode uses SYNCED data, NOT dynamic config!",

@@ -24,7 +24,7 @@ export async function computeItemPrice(pricing, descriptionHtml, selectedKarat) 
   const karatNum = parseInt(selectedKarat);
 
   // Mode 2: Live pricing from synced weight data (always preferred)
-  if (pricing?.diamond_price && pricing[`weight_${karatNum}k`]) {
+  if (false && pricing?.diamond_price && pricing[`weight_${karatNum}k`]) { // diamond price now calculated dynamically
     const weightK = Number(pricing[`weight_${karatNum}k`]);
     const diamondPrice = Math.round(Number(pricing.diamond_price));
     const gold24Price = await fetchGoldPrice();
