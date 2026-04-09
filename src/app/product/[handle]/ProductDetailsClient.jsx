@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+
+const DEBUG = process.env.NEXT_PUBLIC_DEBUG_PRICING === "true";
+const log = (...args) => DEBUG && console.log(...args);
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   ShoppingCart,
@@ -77,7 +80,7 @@ export default function ProductDetails() {
   // PRICE DISPLAY HANDLER
   // ============================================
   const handlePriceData = (data) => {
-    console.log("🎯 [PRODUCT DETAIL] Price data received:", data);
+    log("[PRODUCT DETAIL] Price data received:", data);
     setTotalPrice(data.totalPrice);
     setPriceBreakdown(data);
   };

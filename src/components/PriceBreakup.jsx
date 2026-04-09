@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { calculateFinalPrice } from "../utils/price";
 import { formatIndianCurrency, formatINR } from "../utils/formatIndianCurrency";
 
+const DEBUG = process.env.NEXT_PUBLIC_DEBUG_PRICING === "true";
+const log = (...args) => DEBUG && log(...args);
+
 export default function PriceBreakup({
   descriptionHtml,
   selectedOptions,
@@ -14,7 +17,7 @@ export default function PriceBreakup({
   useEffect(() => {
     async function computePrice() {
       if (!descriptionHtml && !pricing) {
-        console.log(
+        log(
           "⚠️  [EARLY EXIT] No descriptionHtml or pricing data available",
         );
         return;
@@ -25,16 +28,16 @@ export default function PriceBreakup({
       const selectedKarat = selectedOptions["Gold Karat"] || "18K";
       const karatNum = parseInt(selectedKarat);
 
-      console.log(`\n🔧 [CONFIGURATION]`);
-      console.log(`  Selected Karat: ${selectedKarat} (${karatNum}K)`);
-      console.log(
+      log(`\n🔧 [CONFIGURATION]`);
+      log(`  Selected Karat: ${selectedKarat} (${karatNum}K)`);
+      log(
         `  Pricing Mode: ${pricing?.pricing_mode || "none (will use fallback)"}`,
       );
 
       // Fixed pricing mode — use stored prices directly
       if (pricing?.pricing_mode === "fixed") {
-        console.log("\n💾 [MODE: FIXED PRICING]");
-        console.log("  Using pre-stored fixed prices from database");
+        log("\n💾 [MODE: FIXED PRICING]");
+        log("  Using pre-stored fixed prices from database");
 
         const totalPrice = Math.round(
           Number(pricing[`price_${karatNum}k`]) || 0,
@@ -44,11 +47,11 @@ export default function PriceBreakup({
         const makingCharge = Math.round(Number(pricing.making_charges) || 0);
         const gst = Math.round(Number(pricing.gst) || 0);
 
-        console.log(`  Total Price (from DB): ₹${totalPrice}`);
-        console.log(`  Diamond Price: ₹${diamondPrice}`);
-        console.log(`  Gold Price: ₹${goldPrice}`);
-        console.log(`  Making Charge: ₹${makingCharge}`);
-        console.log(`  GST: ₹${gst}`);
+        log(`  Total Price (from DB): ₹${totalPrice}`);
+        log(`  Diamond Price: ₹${diamondPrice}`);
+        log(`  Gold Price: ₹${goldPrice}`);
+        log(`  Making Charge: ₹${makingCharge}`);
+        log(`  GST: ₹${gst}`);
 
         const result = {
           diamondPrice,
@@ -59,8 +62,8 @@ export default function PriceBreakup({
           totalPrice,
         };
 
-        console.log("\n✅ [FIXED PRICING RESULT]");
-        console.log(JSON.stringify(result, null, 2));
+        log("\n✅ [FIXED PRICING RESULT]");
+        log(JSON.stringify(result, null, 2));
 
         setPriceData(result);
         setLoading(false);
@@ -69,17 +72,17 @@ export default function PriceBreakup({
 
       // No description available and no DB diamond data — cannot calculate
       if (!descriptionHtml && !pricing?.diamond_shapes) {
-        console.log("\n❌ No diamond data available — cannot calculate");
+        log("\n❌ No diamond data available — cannot calculate");
         setLoading(false);
         return;
       }
 
-      console.log("\n🔄 [MODE: DYNAMIC CALCULATION]");
-      console.log("  This mode USES your dynamic pricing config ✅");
+      log("\n🔄 [MODE: DYNAMIC CALCULATION]");
+      log("  This mode USES your dynamic pricing config ✅");
 
       // Gold weight from DB
       const goldWeight = Number(pricing?.[`weight_${karatNum}k`]) || 0;
-      console.log(`\n  ⭐ Gold Weight (${selectedKarat}): ${goldWeight}g`);
+      log(`\n  ⭐ Gold Weight (${selectedKarat}): ${goldWeight}g`);
 
       let diamonds = [];
 
@@ -91,20 +94,20 @@ export default function PriceBreakup({
         const counts  = String(pricing.total_diamonds).split(",").map((v) => v.trim());
         // Only use DB path if per-group data is present (counts match number of shape groups)
         if (weights.length === shapes.length && counts.length === shapes.length) {
-          console.log("  💎 Reading diamond data from DB columns");
+          log("  💎 Reading diamond data from DB columns");
           diamonds = shapes.map((shape, i) => ({
             shape,
             weight: parseFloat(weights[i]) || 0,
             count:  parseInt(counts[i])    || 0,
           })).filter((d) => d.weight > 0 && d.count > 0);
         } else {
-          console.log("  ⚠️ DB columns have aggregate values (not per-group) — falling back to HTML");
+          log("  ⚠️ DB columns have aggregate values (not per-group) — falling back to HTML");
         }
       }
 
       // Fall back to HTML parsing if DB columns missing or have aggregate-only values
       if (!diamonds.length && descriptionHtml) {
-        console.log("  💎 DB columns missing/invalid — falling back to HTML parsing");
+        log("  💎 DB columns missing/invalid — falling back to HTML parsing");
         const parser = new DOMParser();
         const doc = parser.parseFromString(descriptionHtml, "text/html");
         const liElements = doc.querySelectorAll(".product-description ul li");
@@ -112,7 +115,7 @@ export default function PriceBreakup({
         liElements.forEach((li) => {
           const key = li.querySelector("strong")?.textContent.replace(":", "").trim();
           const value = li.textContent.replace(li.querySelector("strong")?.textContent || "", "").trim();
-          if (key && value) { specMap[key] = value; console.log(`    ✓ ${key}: ${value}`); }
+          if (key && value) { specMap[key] = value; log(`    ✓ ${key}: ${value}`); }
         });
         const shapes  = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
         const weights = specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
@@ -125,10 +128,10 @@ export default function PriceBreakup({
         })).filter((d) => d.weight > 0 && d.count > 0);
       }
 
-      console.log(`\n  💎 Diamond Data:`, JSON.stringify(diamonds));
+      log(`\n  💎 Diamond Data:`, JSON.stringify(diamonds));
 
       // calculate
-      console.log(
+      log(
         `\n  📊 Calling calculateFinalPrice() with config multipliers...`,
       );
       const result = await calculateFinalPrice({
@@ -137,8 +140,8 @@ export default function PriceBreakup({
         goldKarat: selectedKarat,
       });
 
-      console.log("\n✅ [FALLBACK CALCULATION RESULT]");
-      console.log(JSON.stringify(result, null, 2));
+      log("\n✅ [FALLBACK CALCULATION RESULT]");
+      log(JSON.stringify(result, null, 2));
 
       setPriceData(result);
       setLoading(false);
@@ -149,8 +152,8 @@ export default function PriceBreakup({
 
   useEffect(() => {
     if (priceData && onPriceData) {
-      console.log("📤 [CALLBACK] Sending priceData to parent component");
-      console.log(JSON.stringify(priceData, null, 2));
+      log("📤 [CALLBACK] Sending priceData to parent component");
+      log(JSON.stringify(priceData, null, 2));
       onPriceData(priceData);
     }
   }, [priceData, onPriceData]);
