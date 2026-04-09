@@ -156,7 +156,10 @@ export default function PriceBreakup({
       log(JSON.stringify(priceData, null, 2));
       onPriceData(priceData);
     }
-  }, [priceData, onPriceData]);
+    // onPriceData intentionally excluded — it's an inline function in the parent
+    // and including it causes an infinite render loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceData]);
 
   if (loading) return <p>Calculating price...</p>;
   if (!priceData) return <p>No price data available.</p>;
