@@ -1,14 +1,10 @@
 // src/utils/price.js
 
-// Always log in the browser (visible in DevTools console).
-// On the server, only log if DEBUG_PRICING=true in .env.
-const DEBUG = process.env.DEBUG_PRICING === "true";
+// Server: always logs. Browser: only logs if NEXT_PUBLIC_DEBUG_PRICING=true in .env.
+const DEBUG = process.env.NEXT_PUBLIC_DEBUG_PRICING === "true";
 const log = (...args) => {
-  if (typeof window !== "undefined") {
-    console.log(...args);          // always visible in browser DevTools
-  } else if (DEBUG) {
-    console.log(...args);          // server: opt-in via DEBUG_PRICING=true
-  }
+  if (typeof window === "undefined") console.log(...args);
+  else if (DEBUG) console.log(...args);
 };
 
 // Cache for pricing config
