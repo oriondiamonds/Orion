@@ -3,7 +3,7 @@ import { calculateFinalPrice } from "../utils/price";
 import { formatIndianCurrency, formatINR } from "../utils/formatIndianCurrency";
 
 const DEBUG = process.env.NEXT_PUBLIC_DEBUG_PRICING === "true";
-const log = (...args) => DEBUG && log(...args);
+const log = (...args) => DEBUG && console.log(...args);
 
 export default function PriceBreakup({
   descriptionHtml,
