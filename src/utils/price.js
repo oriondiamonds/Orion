@@ -275,7 +275,8 @@ export async function calculateFinalPrice({
   log("Gold Karat:", goldKarat);
 
   let totalDiamondPrice = 0;
-  let hasSubOneCt = false;
+  let hasSubOneCt  = false;
+  let hasAboveOneCt = false;
 
   log("\n [DIAMOND PRICING BREAKDOWN]");
   log(`  Grade: ${diamondGrade}  |  Category: ${category || "unspecified"}`);
@@ -294,7 +295,8 @@ export async function calculateFinalPrice({
       continue;
     }
 
-    if (weight < 1) hasSubOneCt = true;
+    if (weight < 1)  hasSubOneCt   = true;
+    if (weight >= 1) hasAboveOneCt = true;
 
     const roundShapes = ["round", "rnd", "r"];
     let rate = 0;
@@ -369,7 +371,9 @@ export async function calculateFinalPrice({
 
   // Add fixed fees
   const fees = config.diamondMargins.baseFees;
-  const igiCert   = hasSubOneCt ? (fees.igiCertBelow1ct ?? fees.fee1 ?? 900) : 0;
+  // IGI cert applies only when all diamonds are sub-1ct.
+  // If any group has ≥1ct stones, those are individually certified — skip the fee.
+  const igiCert = (hasSubOneCt && !hasAboveOneCt) ? (fees.igiCertBelow1ct ?? fees.fee1 ?? 900) : 0;
   const baseFixed = fees.baseFixed ?? fees.fee2 ?? 700;
   const catKey    = (category || "").toLowerCase();
   const categoryFee = fees.categoryFees?.[catKey] ?? fees.categoryDefault ?? 250;
