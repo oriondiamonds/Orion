@@ -7,7 +7,7 @@ const SHAPE_MAP = {
   oval: "Oval", ov: "Oval",
   emerald: "Emerald", eme: "Emerald", em: "Emerald",
   pear: "Pear", pr: "Pear", pe: "Pear",
-  marquise: "Marquise", mq: "Marquise", mar: "Marquise",
+  marquise: "Marquise", mq: "Marquise", mrq: "Marquise", mar: "Marquise",
   princess: "Princess", prin: "Princess", ps: "Princess",
   cushion: "Cushion", cush: "Cushion", cu: "Cushion",
   heart: "Heart", ht: "Heart",
