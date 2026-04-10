@@ -50,20 +50,28 @@ async function fetchFromNavkar() {
         });
       }
 
-      // ID 9054 = GOLD COSTING — value is ₹/10g → divide by 10 to get ₹/g
+      // Parse all lines into a map keyed by ID for easy lookup
+      const rowMap = {};
       for (const line of lines) {
         const normalised = line.replace(/\\t/g, "\t");
         const parts = normalised.split("\t").map((p) => p.trim()).filter(Boolean);
-        if (parts.length >= 3 && parts[0] === "9054" && parts[1].toUpperCase().includes("GOLD")) {
-          const per10g = parseFloat(parts[2]);
-          if (!isNaN(per10g) && per10g > 0) {
-            const price = per10g / 10;
-            console.log(`✅ Navkar GOLD COSTING (9054): ₹${per10g}/10g → ₹${price}/g`);
-            return price;
-          }
+        if (parts.length >= 3) rowMap[parts[0]] = parts;
+      }
+
+      // ID 7594 = GOLD 999 IMP (TODAY) — primary, ₹/10g
+      // ID 9054 = GOLD COSTING — fallback, ₹/10g
+      const preferred = rowMap["7594"] || rowMap["9054"];
+      if (preferred) {
+        const id     = preferred[0];
+        const name   = preferred[1];
+        const per10g = parseFloat(preferred[2]);
+        if (!isNaN(per10g) && per10g > 0) {
+          const price = per10g / 10;
+          console.log(`Navkar ${name} (${id}): Rs.${per10g}/10g → Rs.${price}/g`);
+          return price;
         }
       }
-      console.warn(`   → Parsed but GOLD COSTING (9054) not found`);
+      console.warn(`   → Parsed but neither 7594 nor 9054 found`);
     } catch (err) {
       console.warn(`   → ${err.message}`);
     }
