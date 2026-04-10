@@ -1,6 +1,29 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, CircleCheckBig } from "lucide-react";
 import PriceBreakup from "./PriceBreakup";
+
+const SHAPE_MAP = {
+  round: "Round", rnd: "Round", r: "Round",
+  oval: "Oval", ov: "Oval",
+  emerald: "Emerald", eme: "Emerald", em: "Emerald",
+  pear: "Pear", pr: "Pear", pe: "Pear",
+  marquise: "Marquise", mq: "Marquise", mar: "Marquise",
+  princess: "Princess", prin: "Princess", ps: "Princess",
+  cushion: "Cushion", cush: "Cushion", cu: "Cushion",
+  heart: "Heart", ht: "Heart",
+  radiant: "Radiant", rad: "Radiant",
+  asscher: "Asscher", ass: "Asscher",
+  trillion: "Trillion", tri: "Trillion", tril: "Trillion",
+  baguette: "Baguette", bag: "Baguette", bgt: "Baguette",
+  melee: "Melee", mele: "Melee",
+  brilliant: "Brilliant", brill: "Brilliant",
+};
+
+function normalizeShape(raw) {
+  if (!raw || raw === "-") return raw;
+  const key = raw.toLowerCase().trim();
+  return SHAPE_MAP[key] || (raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase());
+}
 /* ---------- DIAMOND DETAILS ---------- */
 
 function DiamondDetails({ descriptionHtml }) {
@@ -80,7 +103,7 @@ function DiamondDetails({ descriptionHtml }) {
       const rowCount = shapes.length || Math.max(weights.length, dimensions.length);
 
       const rows = Array.from({ length: rowCount }, (_, i) => ({
-        shape: shapes[i] || "-",
+        shape: normalizeShape(shapes[i]) || "-",
         weight: weights[i] || "-",
         number: numbers[i] || "-",
         totalWeight: totalWeights[i] || "-",
