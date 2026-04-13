@@ -268,9 +268,13 @@ export default function CollectionSection({ id, title, items = [] }) {
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages) {
       router.push(`?page=${page}`, { scroll: false });
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
+
+  // Scroll to top on every page change — covers forward clicks and back/forward button
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentPage]);
 
   // Reset to page 1 when filters/sort change
   useEffect(() => {
