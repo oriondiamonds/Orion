@@ -187,21 +187,19 @@ export default function CollectionSection({ id, title, items = [] }) {
     return [...karats].sort((a, b) => parseInt(a) - parseInt(b));
   })();
 
+  // "All" always resolves to 10K — single source of truth for price display
+  const effectiveKarat = karatFilter !== "all" ? karatFilter : "10K";
+
   // Get the effective price for an item — live price preferred, stored price as fallback
   const getItemPrice = (item) => {
-    const tryKarats = karatFilter !== "all" ? [karatFilter] : ["10K", "14K", "18K"];
-    for (const k of tryKarats) {
-      const live = livePrices[`${item.handle}_${k}`];
-      if (live) return live;
-    }
-    if (karatFilter !== "all" && item.prices?.[karatFilter]) return item.prices[karatFilter];
+    const live = livePrices[`${item.handle}_${effectiveKarat}`];
+    if (live) return live;
+    if (item.prices?.[effectiveKarat]) return item.prices[effectiveKarat];
     return item.price;
   };
 
-  const isLivePriceReady = (item) => {
-    const tryKarats = karatFilter !== "all" ? [karatFilter] : ["10K", "14K", "18K"];
-    return tryKarats.some((k) => !!livePrices[`${item.handle}_${k}`]);
-  };
+  const isLivePriceReady = (item) =>
+    !!livePrices[`${item.handle}_${effectiveKarat}`];
 
   // Filter items by karat availability
   const karatFilteredItems =
@@ -621,11 +619,9 @@ export default function CollectionSection({ id, title, items = [] }) {
 
                   {/* Price Display */}
                   <div className="mt-auto">
-                    {karatFilter !== "all" && (
-                      <p className="text-xs md:text-sm text-gray-500 mb-1">
-                        {karatFilter} Gold
-                      </p>
-                    )}
+                    <p className="text-xs md:text-sm text-gray-500 mb-1">
+                      {effectiveKarat} Gold
+                    </p>
                     <p className={`text-lg md:text-xl font-bold text-[#0a1833] transition-opacity duration-300 ${!isLivePriceReady(item) ? "opacity-40" : ""}`}>
                       {formatINR(getItemPrice(item))}
                     </p>
