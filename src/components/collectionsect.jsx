@@ -270,9 +270,7 @@ export default function CollectionSection({ id, title, items = [] }) {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
 
-      const url = new URL(window.location.href);
-      url.searchParams.set("page", page);
-      window.history.replaceState({}, "", url);
+      router.push(`?page=${page}`, { scroll: false });
 
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
