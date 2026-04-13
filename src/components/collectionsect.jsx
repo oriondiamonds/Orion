@@ -63,8 +63,7 @@ export default function CollectionSection({ id, title, items = [] }) {
   const [cartLoadingId, setCartLoadingId] = useState(null);
   const [livePrices, setLivePrices] = useState({});
   const searchParams = useSearchParams();
-  const initialPage = Number(searchParams.get("page")) || 1;
-  const [currentPage, setCurrentPage] = useState(initialPage);
+  const currentPage = Number(searchParams.get("page")) || 1;
 
   // Load wishlist state from localStorage on mount
   useEffect(() => {
@@ -268,17 +267,14 @@ export default function CollectionSection({ id, title, items = [] }) {
 
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-
       router.push(`?page=${page}`, { scroll: false });
-
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   // Reset to page 1 when filters/sort change
   useEffect(() => {
-    setCurrentPage(initialPage);
+    router.push("?page=1", { scroll: false });
   }, [sortBy, priceRange, karatFilter]);
 
   const handleResetFilters = () => {
