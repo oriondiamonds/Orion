@@ -26,93 +26,98 @@ function normalizeShape(raw) {
 }
 /* ---------- DIAMOND DETAILS ---------- */
 
-function DiamondDetails({ descriptionHtml }) {
-  const [diamondData, setDiamondData] = useState({ rows: [], grade: "" });
+function DiamondDetails({ descriptionHtml, pricing }) {
+  const [diamondData, setDiamondData] = useState({ rows: [] });
 
   useEffect(() => {
-    if (descriptionHtml) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(descriptionHtml, "text/html");
-      const liElements = doc.querySelectorAll(".product-description ul li");
-      const paragraphs = doc.querySelectorAll(".product-description p");
+    // Prefer structured DB data — no HTML parsing needed
+    if (pricing?.diamond_shapes && pricing?.diamond_weight && pricing?.total_diamonds) {
+      const shapes  = String(pricing.diamond_shapes).split(",").map((v) => v.trim()).filter(Boolean);
+      const weights = String(pricing.diamond_weight).split(",").map((v) => v.trim());
+      const counts  = String(pricing.total_diamonds).split(",").map((v) => v.trim());
+      const totals  = pricing.total_diamond_weight
+        ? String(pricing.total_diamond_weight).split(",").map((v) => v.trim().replace(/ct$/i, ""))
+        : [];
+      const sizes   = pricing.diamond_sizes
+        ? String(pricing.diamond_sizes).split(",").map((v) => v.trim())
+        : [];
 
-      const specMap = {};
-      liElements.forEach((li) => {
-        const key = li
-          .querySelector("strong")
-          ?.textContent.replace(":", "")
-          .trim();
-        const value = li.textContent
-          .replace(li.querySelector("strong")?.textContent || "", "")
-          .trim();
-        if (key && value) {
-          specMap[key] = value;
-        }
-      });
-
-      // Extract dimensions from paragraphs
-      paragraphs.forEach((p) => {
-        const strongEl = p.querySelector("strong");
-        if (strongEl) {
-          const key = strongEl.textContent.replace(":", "").trim();
-          const value = p.textContent.replace(strongEl.textContent, "").trim();
-          if (key === "Dimensions" && value) {
-            specMap[key] = value;
-          }
-        }
-      });
-
-      // Extract relevant values
-      const shapes =
-        specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
-      const weights =
-        specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
-
-      // Per-shape quantities: prefer "Diamond Count", fallback to "Total Diamonds".
-      // Comma-separated → per-shape. Single value → per-shape only if 1 shape.
-      const rawCount = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
-      const numbers = rawCount.includes(",")
-        ? rawCount.split(",").map((v) => v.trim())
-        : rawCount && shapes.length <= 1
-          ? [rawCount.trim()]
-          : [];
-
-      // Per-shape total weights: prefer "Diamond Total Weight", fallback to
-      // "Total Diamond Weight". Same rule: single value ok if 1 shape.
-      const rawTotalWeight = specMap["Diamond Total Weight"] || specMap["Total Diamond Weight"] || "";
-      const storedTotalWeights = rawTotalWeight.includes(",")
-        ? rawTotalWeight.split(",").map((v) => v.trim().replace(/ct$/i, ""))
-        : rawTotalWeight && shapes.length <= 1
-          ? [rawTotalWeight.trim().replace(/ct$/i, "")]
-          : [];
-
-      // Fallback: compute per-shape total weight from weight × count
-      const computedTotalWeights = shapes.map((_, i) => {
-        const w = parseFloat(weights[i]);
-        const n = parseInt(numbers[i]);
-        if (!isNaN(w) && !isNaN(n)) return (w * n).toFixed(3);
-        return storedTotalWeights[i] || "-";
-      });
-
-      const totalWeights = computedTotalWeights;
-
-      const dimensions =
-        (specMap["Diamond Size"] || specMap["Dimensions"])
-          ?.split(",").map((v) => v.trim()) || [];
-
-      const rowCount = shapes.length || Math.max(weights.length, dimensions.length);
-
-      const rows = Array.from({ length: rowCount }, (_, i) => ({
-        shape: normalizeShape(shapes[i]) || "-",
-        weight: weights[i] || "-",
-        number: numbers[i] || "-",
-        totalWeight: totalWeights[i] || "-",
-        dimensions: dimensions[i] || "-",
-      }));
-
-      setDiamondData({ rows, grade: specMap["Diamond Grade"] || "" });
+      if (weights.length === shapes.length && counts.length === shapes.length) {
+        const rows = shapes.map((shape, i) => {
+          const w = parseFloat(weights[i]);
+          const n = parseInt(counts[i]);
+          const computedTotal = !isNaN(w) && !isNaN(n) ? (w * n).toFixed(3) : "-";
+          return {
+            shape: normalizeShape(shape),
+            weight: weights[i] || "-",
+            number: counts[i] || "-",
+            totalWeight: totals[i] || computedTotal,
+            dimensions: sizes[i] || "-",
+          };
+        });
+        setDiamondData({ rows });
+        return;
+      }
     }
-  }, [descriptionHtml]);
+
+    // Fall back to HTML parsing when DB columns are missing
+    if (!descriptionHtml) return;
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(descriptionHtml, "text/html");
+    const liElements = doc.querySelectorAll(".product-description ul li");
+    const paragraphs = doc.querySelectorAll(".product-description p");
+
+    const specMap = {};
+    liElements.forEach((li) => {
+      const key = li.querySelector("strong")?.textContent.replace(":", "").trim();
+      const value = li.textContent.replace(li.querySelector("strong")?.textContent || "", "").trim();
+      if (key && value) specMap[key] = value;
+    });
+
+    paragraphs.forEach((p) => {
+      const strongEl = p.querySelector("strong");
+      if (strongEl) {
+        const key = strongEl.textContent.replace(":", "").trim();
+        const value = p.textContent.replace(strongEl.textContent, "").trim();
+        if (key === "Dimensions" && value) specMap[key] = value;
+      }
+    });
+
+    const shapes  = specMap["Diamond Shape"]?.split(",").map((v) => v.trim()) || [];
+    const weights = specMap["Diamond Weight"]?.split(",").map((v) => v.trim()) || [];
+
+    const rawCount = specMap["Diamond Count"] || specMap["Total Diamonds"] || "";
+    const numbers = rawCount.includes(",")
+      ? rawCount.split(",").map((v) => v.trim())
+      : rawCount && shapes.length <= 1 ? [rawCount.trim()] : [];
+
+    const rawTotalWeight = specMap["Diamond Total Weight"] || specMap["Total Diamond Weight"] || "";
+    const storedTotalWeights = rawTotalWeight.includes(",")
+      ? rawTotalWeight.split(",").map((v) => v.trim().replace(/ct$/i, ""))
+      : rawTotalWeight && shapes.length <= 1 ? [rawTotalWeight.trim().replace(/ct$/i, "")] : [];
+
+    const totalWeights = shapes.map((_, i) => {
+      const w = parseFloat(weights[i]);
+      const n = parseInt(numbers[i]);
+      if (!isNaN(w) && !isNaN(n)) return (w * n).toFixed(3);
+      return storedTotalWeights[i] || "-";
+    });
+
+    const dimensions = (specMap["Diamond Size"] || specMap["Dimensions"])
+      ?.split(",").map((v) => v.trim()) || [];
+
+    const rowCount = shapes.length || Math.max(weights.length, dimensions.length);
+    const rows = Array.from({ length: rowCount }, (_, i) => ({
+      shape: normalizeShape(shapes[i]) || "-",
+      weight: weights[i] || "-",
+      number: numbers[i] || "-",
+      totalWeight: totalWeights[i] || "-",
+      dimensions: dimensions[i] || "-",
+    }));
+
+    setDiamondData({ rows });
+  }, [descriptionHtml, pricing]);
 
   const { rows } = diamondData;
 
@@ -342,7 +347,7 @@ export default function ProductAccordion({
       key: "diamond",
       label: "DIAMOND DETAILS",
       sublabel: selectedOptions?.["Diamond Grade"] || "",
-      content: <DiamondDetails descriptionHtml={product.descriptionHtml} />,
+      content: <DiamondDetails descriptionHtml={product.descriptionHtml} pricing={product.pricing} />,
     },
     {
       key: "product",
