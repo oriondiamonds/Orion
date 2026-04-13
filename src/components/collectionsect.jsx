@@ -619,9 +619,11 @@ export default function CollectionSection({ id, title, items = [] }) {
 
                   {/* Price Display */}
                   <div className="mt-auto">
-                    <p className="text-xs md:text-sm text-gray-500 mb-1">
-                      {effectiveKarat} Gold
-                    </p>
+                    {karatFilter !== "all" && (
+                      <p className="text-xs md:text-sm text-gray-500 mb-1">
+                        {effectiveKarat} Gold
+                      </p>
+                    )}
                     <p className={`text-lg md:text-xl font-bold text-[#0a1833] transition-opacity duration-300 ${!isLivePriceReady(item) ? "opacity-40" : ""}`}>
                       {formatINR(getItemPrice(item))}
                     </p>
