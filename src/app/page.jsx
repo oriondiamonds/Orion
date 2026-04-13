@@ -290,7 +290,7 @@ export default function Landing() {
               {/* CUSTOMIZE BUTTON ON DESKTOP HERO3 */}
               <button
                 onClick={() => router.push("#customizations")}
-                className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 bg-white/85 text-[#0a1833] px-8 py-4 rounded-full text-xl font-semibold backdrop-blur-md shadow-lg hover:bg-white"
+                className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 bg-white/85 text-[#0a1833] px-6 py-3 md:px-8 md:py-4 rounded-full text-base md:text-xl font-semibold backdrop-blur-md shadow-lg hover:bg-white"
               >
                 Customize Now
               </button>
@@ -298,11 +298,11 @@ export default function Landing() {
           ) : (
             <>
               {/* LEFT SIDE TEXT */}
-              <div className="z-20 w-1/2 flex flex-col object-left items-start text-left px-16 lg:px-24 lg:py-45">
-                <h1 className="text-6xl md:text-7xl font-serif font-semibold leading-tight text-white">
+              <div className="z-20 w-1/2 flex flex-col items-start justify-center text-left px-10 md:px-14 lg:px-24 py-20 lg:py-45">
+                <h1 className="text-4xl md:text-5xl lg:text-7xl font-serif font-semibold leading-tight text-white">
                   Orion Diamonds
                 </h1>
-                <p className="mt-6 text-xl max-w-xl text-white">
+                <p className="mt-4 text-base md:text-lg lg:text-xl max-w-xl text-white">
                   Lab-grown diamonds inspired by the celestial brilliance of the
                   Orion constellation.
                 </p>
@@ -316,7 +316,7 @@ export default function Landing() {
                   fill
                   priority
                   sizes="50vw"
-                  className="object-cover object-right sm:rounded-l-4xl"
+                  className="object-cover object-center sm:rounded-l-4xl"
                 />
                 <div className="absolute inset-y-0 left-0 w-32 bg-linear-to-r from-[#0a1833] to-transparent pointer-events-none"></div>
               </div>
