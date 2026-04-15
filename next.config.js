@@ -2,9 +2,10 @@
 const nextConfig = {
   // Image optimization settings
   images: {
-    // Set NEXT_PUBLIC_DISABLE_IMAGE_OPT=true on the dev Vercel deployment
-    // to bypass the free-tier 402 quota limit on /_next/image
-    unoptimized: process.env.NEXT_PUBLIC_DISABLE_IMAGE_OPT === "true",
+    // Route Supabase Storage images through Supabase's own transform API
+    // instead of Vercel's /_next/image — avoids the free-tier 402 quota error.
+    loader: "custom",
+    loaderFile: "./src/utils/imageLoader.js",
 
     // Enable static imports
     dangerouslyAllowSVG: true,
