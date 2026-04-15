@@ -15,7 +15,7 @@ export default function supabaseImageLoader({ src, width, quality }) {
       "/storage/v1/object/public/",
       "/storage/v1/render/image/public/"
     );
-    return `${renderUrl}?width=${width}&quality=${quality || 75}&format=webp`;
+    return `${renderUrl}?width=${width}&quality=${quality || 75}&format=origin`;
   }
   // Local images or other external URLs — return unchanged
   return src;
