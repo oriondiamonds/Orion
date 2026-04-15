@@ -2,10 +2,10 @@
 const nextConfig = {
   // Image optimization settings
   images: {
-    // Route Supabase Storage images through Supabase's own transform API
-    // instead of Vercel's /_next/image — avoids the free-tier 402 quota error.
-    loader: "custom",
-    loaderFile: "./src/utils/imageLoader.js",
+    // Images are pre-optimised WebP (1080px max, ≤200KB) at upload time via
+    // push_to_db.py — no runtime transformation needed, skip Vercel's /_next/image
+    // quota entirely.
+    unoptimized: true,
 
     // Enable static imports
     dangerouslyAllowSVG: true,
