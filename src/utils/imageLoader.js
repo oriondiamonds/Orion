@@ -1,22 +1,16 @@
 /**
- * Custom Next.js image loader that routes Supabase Storage images through
- * Supabase's image transformation API instead of Vercel's /_next/image.
+ * Custom Next.js image loader.
  *
- * Benefits:
- * - No Vercel image optimization quota consumed (avoids 402 on free tier)
- * - Supabase resizes + converts to WebP/format on the fly
- * - CDN-cached at the Supabase edge
+ * Supabase Storage images are routed through /api/img — a serverless function
+ * that uses sharp to convert to WebP + resize. Vercel CDN caches the result,
+ * so the function only fires once per unique src+width+quality combination.
+ * This avoids Vercel's /_next/image quota (402 on free tier) entirely.
  *
- * For non-Supabase URLs the original src is returned as-is.
+ * Local/static images are returned as-is (no processing needed).
  */
-export default function supabaseImageLoader({ src, width, quality }) {
+export default function imageLoader({ src, width, quality }) {
   if (src.includes(".supabase.co/storage/v1/object/public/")) {
-    const renderUrl = src.replace(
-      "/storage/v1/object/public/",
-      "/storage/v1/render/image/public/"
-    );
-    return `${renderUrl}?width=${width}&quality=${quality || 75}&format=origin`;
+    return `/api/img?url=${encodeURIComponent(src)}&w=${width}&q=${quality || 75}`;
   }
-  // Local images or other external URLs — return unchanged
   return src;
 }

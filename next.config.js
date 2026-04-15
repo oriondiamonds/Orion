@@ -2,10 +2,10 @@
 const nextConfig = {
   // Image optimization settings
   images: {
-    // Images are pre-optimised WebP (1080px max, ≤200KB) at upload time via
-    // push_to_db.py — no runtime transformation needed, skip Vercel's /_next/image
-    // quota entirely.
-    unoptimized: true,
+    // Route Supabase images through /api/img (sharp-based serverless function)
+    // instead of Vercel's /_next/image — no quota, full WebP conversion, CDN-cached.
+    loader: "custom",
+    loaderFile: "./src/utils/imageLoader.js",
 
     // Enable static imports
     dangerouslyAllowSVG: true,
