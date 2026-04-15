@@ -64,7 +64,7 @@ async function transformEarringsData(productsEdges) {
           "18K": productPricing.price18K || variantPrice,
         },
         currency: firstVariant?.price?.currencyCode || "INR",
-        image: product.featuredImage?.url || firstVariant?.image?.url || "",
+        image: product.featuredImage?.url || firstVariant?.image?.url || product.images?.edges?.[0]?.node?.url || "",
         images:
           product.images?.edges?.map((img) => ({
             url: img.node.url,
