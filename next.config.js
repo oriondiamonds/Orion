@@ -2,10 +2,9 @@
 const nextConfig = {
   // Image optimization settings
   images: {
-    // Route Supabase images through /api/img (sharp-based serverless function)
-    // instead of Vercel's /_next/image — no quota, full WebP conversion, CDN-cached.
-    loader: "custom",
-    loaderFile: "./src/utils/imageLoader.js",
+    // Images are pre-converted WebP at source (push_to_db.py + convert_images_to_webp.py)
+    // Serve directly from Supabase CDN — no Vercel /_next/image quota consumed.
+    unoptimized: true,
 
     // Enable static imports
     dangerouslyAllowSVG: true,
