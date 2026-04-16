@@ -94,6 +94,8 @@ export function Navbar() {
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
       setShowResults(false);
+      setDesktopSearchOpen(false);
+      setMobileSearchOpen(false);
     }
   };
 
@@ -106,6 +108,8 @@ export function Navbar() {
   const handleResultClick = () => {
     setSearchQuery("");
     setShowResults(false);
+    setDesktopSearchOpen(false);
+    setMobileSearchOpen(false);
   };
 
   // === Focus behavior ===
@@ -385,6 +389,7 @@ export function Navbar() {
                 e.preventDefault();
                 router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
                 setShowResults(false);
+                setDesktopSearchOpen(false);
               }}
               className="text-sm text-black font-medium hover:underline"
             >
