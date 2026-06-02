@@ -1,4 +1,22 @@
 "use client";
+
+// Module-level cache — survives React component unmount/remount in the same browser session.
+// Falls back to sessionStorage so filters also survive full page navigations.
+const _memCache = new Map();
+
+function _readFilters(key) {
+  if (_memCache.has(key)) return _memCache.get(key);
+  try {
+    const raw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(key) : null;
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+function _writeFilters(key, data) {
+  _memCache.set(key, data);
+  try { if (typeof sessionStorage !== "undefined") sessionStorage.setItem(key, JSON.stringify(data)); } catch {}
+}
+
 import Image from "next/image";
 import {
   Heart,
@@ -9,10 +27,9 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatINR } from "../utils/formatIndianCurrency";
-import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import CategoryNav from "./CategoryNav";
 import { markCartLocallyModified } from "../utils/cartCleanup";
@@ -54,16 +71,60 @@ function getDefaultVariant(item, karatFilter) {
 
 export default function CollectionSection({ id, title, items = [] }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [itemsPerPage, setItemsPerPage] = useState(8);
-  const [sortBy, setSortBy] = useState("price-low");
-  const [priceRange, setPriceRange] = useState([0, 500000]);
-  const [karatFilter, setKaratFilter] = useState("all");
+
+  const SESSION_KEY = `orion_col_${id}`;
+
+  // Sort and karats live in the URL — back button restores them for free
+  const currentPage = Number(searchParams.get("page")) || 1;
+  const sortBy = searchParams.get("sort") || "default";
+  const karatsParam = searchParams.get("karats") || "";
+  const selectedKarats = karatsParam ? karatsParam.split(",").filter(Boolean) : [];
+
+  // Build updated URLSearchParams without mutating the current ones
+  function buildParams(updates) {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([k, v]) => {
+      if (v === null || v === undefined || v === "" || v === "default" ||
+          (Array.isArray(v) && v.length === 0)) {
+        params.delete(k);
+      } else {
+        params.set(k, Array.isArray(v) ? v.join(",") : String(v));
+      }
+    });
+    return params;
+  }
+
+  function setSortBy(value) {
+    const params = buildParams({ sort: value, page: null });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function updateKarats(newKarats) {
+    // Clear saved price range — it belongs to the previous karat selection
+    const params = buildParams({ karats: newKarats, page: null, minPrice: null, maxPrice: null });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function flushPriceRange(range) {
+    const params = buildParams({ minPrice: range[0], maxPrice: range[1] });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  // priceRange: local state for smooth typing, URL is the source of truth on mount
+  const [priceRange, setPriceRange] = useState(() => {
+    const minFromUrl = Number(searchParams.get("minPrice")) || 0;
+    const maxFromUrl = Number(searchParams.get("maxPrice")) || 0;
+    if (maxFromUrl > 0) return [minFromUrl, maxFromUrl];
+    return [0, 500000];
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [wishlistedHandles, setWishlistedHandles] = useState(new Set());
   const [cartLoadingId, setCartLoadingId] = useState(null);
   const [livePrices, setLivePrices] = useState({});
-  const searchParams = useSearchParams();
-  const currentPage = Number(searchParams.get("page")) || 1;
+
 
   // Load wishlist state from localStorage on mount
   useEffect(() => {
@@ -186,8 +247,8 @@ export default function CollectionSection({ id, title, items = [] }) {
     return [...karats].sort((a, b) => parseInt(a) - parseInt(b));
   })();
 
-  // "All" always resolves to 10K — single source of truth for price display
-  const effectiveKarat = karatFilter !== "all" ? karatFilter : "10K";
+  // Use first selected karat for price display, fall back to 10K
+  const effectiveKarat = selectedKarats.length > 0 ? selectedKarats[0] : "10K";
 
   // Get the effective price for an item — live price preferred, stored price as fallback
   const getItemPrice = (item) => {
@@ -200,14 +261,14 @@ export default function CollectionSection({ id, title, items = [] }) {
   const isLivePriceReady = (item) =>
     !!livePrices[`${item.handle}_${effectiveKarat}`];
 
-  // Filter items by karat availability
+  // Filter items by karat — multi-select, empty = show all
   const karatFilteredItems =
-    karatFilter === "all"
+    selectedKarats.length === 0
       ? items
       : items.filter((item) =>
           (item.allVariants || []).some((variant) =>
             (variant.selectedOptions || []).some(
-              (opt) => opt.name === "Gold Karat" && opt.value === karatFilter,
+              (opt) => opt.name === "Gold Karat" && selectedKarats.includes(opt.value),
             ),
           ),
         );
@@ -222,15 +283,20 @@ export default function CollectionSection({ id, title, items = [] }) {
       ? Math.max(...karatFilteredItems.map(getItemPrice))
       : 500000;
 
-  // Reset price range when items or karat changes
+  // true when user has explicitly set a price range (stored in URL)
+  const hasCustomPriceRange = !!(searchParams.get("minPrice") || searchParams.get("maxPrice"));
+
+  // Auto-set price range from actual item prices.
+  // Runs on mount, when live prices load, and when karats change.
+  // Skips when the user has a custom range saved in the URL.
   useEffect(() => {
-    if (karatFilteredItems.length > 0) {
-      setPriceRange([
-        Math.min(...karatFilteredItems.map(getItemPrice)),
-        Math.max(...karatFilteredItems.map(getItemPrice)),
-      ]);
-    }
-  }, [items, karatFilter]);
+    if (hasCustomPriceRange) return;
+    if (karatFilteredItems.length === 0) return;
+    const min = Math.min(...karatFilteredItems.map(getItemPrice));
+    const max = Math.max(...karatFilteredItems.map(getItemPrice));
+    if (max > 0) setPriceRange([min, max]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [livePrices, karatsParam, hasCustomPriceRange]);
 
   // Handle responsive page size
   useEffect(() => {
@@ -267,7 +333,9 @@ export default function CollectionSection({ id, title, items = [] }) {
 
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages) {
-      router.push(`?page=${page}`, { scroll: false });
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("page", String(page));
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     }
   };
 
@@ -276,25 +344,21 @@ export default function CollectionSection({ id, title, items = [] }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage]);
 
-  // Reset to page 1 when filters/sort change
-  useEffect(() => {
-    router.push("?page=1", { scroll: false });
-  }, [sortBy, priceRange, karatFilter]);
 
   const handleResetFilters = () => {
-    setSortBy("default");
+    const params = buildParams({ sort: null, karats: null, page: null, minPrice: null, maxPrice: null });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setPriceRange([minPrice, maxPrice]);
-    setKaratFilter("all");
   };
 
   const isFiltered =
     sortBy !== "default" ||
     priceRange[0] !== minPrice ||
     priceRange[1] !== maxPrice ||
-    karatFilter !== "all";
+    selectedKarats.length > 0;
 
   const getProductUrl = (handle) => {
-    const karat = karatFilter !== "all" ? karatFilter : "10K";
+    const karat = selectedKarats.length > 0 ? selectedKarats[0] : "10K";
     return `/product/${handle}?karat=${karat}`;
   };
 
@@ -307,7 +371,7 @@ export default function CollectionSection({ id, title, items = [] }) {
       return;
     }
 
-    const variant = getDefaultVariant(item, karatFilter);
+    const variant = getDefaultVariant(item, selectedKarats.length > 0 ? selectedKarats[0] : "all");
     if (!variant) {
       router.push(getProductUrl(item.handle));
       return;
@@ -380,7 +444,7 @@ export default function CollectionSection({ id, title, items = [] }) {
       });
       toast.success("Removed from wishlist");
     } else {
-      const variant = getDefaultVariant(item, karatFilter);
+      const variant = getDefaultVariant(item, selectedKarats.length > 0 ? selectedKarats[0] : "all");
       const wishlistItem = {
         id: item.handle, // use handle as id since collection items lack UUID
         variantId: variant?.id || null,
@@ -452,29 +516,25 @@ export default function CollectionSection({ id, title, items = [] }) {
             </select>
           </div>
 
-          {/* Gold Karat Filter */}
+          {/* Gold Karat Filter — multi-select, click to toggle */}
           {availableKarats.length > 0 && (
             <div className="flex-1">
               <label className="block text-sm font-medium text-[#0a1833] mb-2">
-                Gold Karat
+                Gold Karat {selectedKarats.length > 0 && <span className="text-xs text-gray-500 ml-1">({selectedKarats.length} selected)</span>}
               </label>
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setKaratFilter("all")}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    karatFilter === "all"
-                      ? "bg-[#0a1833] text-white"
-                      : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  All
-                </button>
                 {availableKarats.map((karat) => (
                   <button
                     key={karat}
-                    onClick={() => setKaratFilter(karat)}
+                    onClick={() =>
+                      updateKarats(
+                        selectedKarats.includes(karat)
+                          ? selectedKarats.filter((k) => k !== karat)
+                          : [...selectedKarats, karat]
+                      )
+                    }
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      karatFilter === karat
+                      selectedKarats.includes(karat)
                         ? "bg-[#0a1833] text-white"
                         : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
                     }`}
@@ -498,6 +558,9 @@ export default function CollectionSection({ id, title, items = [] }) {
                 onChange={(e) =>
                   setPriceRange([Number(e.target.value), priceRange[1]])
                 }
+                onBlur={(e) =>
+                  flushPriceRange([Number(e.target.value), priceRange[1]])
+                }
                 placeholder="Min"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a1833] text-sm"
               />
@@ -507,6 +570,9 @@ export default function CollectionSection({ id, title, items = [] }) {
                 value={priceRange[1]}
                 onChange={(e) =>
                   setPriceRange([priceRange[0], Number(e.target.value)])
+                }
+                onBlur={(e) =>
+                  flushPriceRange([priceRange[0], Number(e.target.value)])
                 }
                 placeholder="Max"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a1833] text-sm"
@@ -617,7 +683,7 @@ export default function CollectionSection({ id, title, items = [] }) {
 
                   {/* Price Display */}
                   <div className="mt-auto">
-                    {karatFilter !== "all" && (
+                    {selectedKarats.length > 0 && (
                       <p className="text-xs md:text-sm text-gray-500 mb-1">
                         {effectiveKarat} Gold
                       </p>
