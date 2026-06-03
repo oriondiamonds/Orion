@@ -79,7 +79,7 @@ export default function CollectionSection({ id, title, items = [] }) {
 
   // Sort and karats live in the URL — back button restores them for free
   const currentPage = Number(searchParams.get("page")) || 1;
-  const sortBy = searchParams.get("sort") || "default";
+  const sortBy = searchParams.get("sort") || "price-low";
   const karatsParam = searchParams.get("karats") || "";
   const selectedKarats = karatsParam ? karatsParam.split(",").filter(Boolean) : [];
 
@@ -87,7 +87,7 @@ export default function CollectionSection({ id, title, items = [] }) {
   function buildParams(updates) {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([k, v]) => {
-      if (v === null || v === undefined || v === "" || v === "default" ||
+      if (v === null || v === undefined || v === "" || v === "default" || v === "price-low" ||
           (Array.isArray(v) && v.length === 0)) {
         params.delete(k);
       } else {
@@ -352,7 +352,7 @@ export default function CollectionSection({ id, title, items = [] }) {
   };
 
   const isFiltered =
-    sortBy !== "default" ||
+    sortBy !== "price-low" ||
     priceRange[0] !== minPrice ||
     priceRange[1] !== maxPrice ||
     selectedKarats.length > 0;
