@@ -10,8 +10,12 @@ import CartSyncProvider from "../components/CartSyncProvider";
 import UtmVisitTracker from "../components/UtmVisitTracker";
 import CouponCapture from "../components/CouponCapture";
 import Script from "next/script";
+import { getSiteUrl } from "../utils/siteUrl";
+
+const siteUrl = getSiteUrl();
 
 export const metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Orion Diamonds — Lab-Grown Diamond Jewellery",
     template: "%s — Orion Diamonds",
@@ -20,11 +24,11 @@ export const metadata = {
     "Shop certified lab-grown diamond rings, earrings, bracelets and pendants. IGI-certified, ethically sourced, 80% buyback guarantee. Free shipping across India.",
   openGraph: {
     siteName: "Orion Diamonds",
-    url: "https://www.oriondiamonds.in",
+    url: siteUrl,
     type: "website",
     images: [
       {
-        url: "https://www.oriondiamonds.in/og-image.png",
+        url: "/og-image.png",
         width: 400,
         height: 100,
         alt: "Orion Diamonds",

@@ -1,11 +1,13 @@
 import { getProductByHandle } from "../../../queries/products";
 import ProductDetailsClient from "./ProductDetailsClient";
+import { getSiteUrl } from "../../../utils/siteUrl";
 
 export async function generateMetadata({ params }) {
   const { handle } = await params; // ← Add this await
 
   const response = await getProductByHandle(handle);
   const product = response?.product;
+  const siteUrl = getSiteUrl();
 
   if (!product) {
     return {
@@ -17,7 +19,7 @@ export async function generateMetadata({ params }) {
   let imageUrl =
     product?.featuredImage?.url ||
     product?.images?.edges?.[0]?.node?.url ||
-    "https://www.oriondiamonds.in/icon.jpeg";
+    `${siteUrl}/icon.jpeg`;
   if (imageUrl) {
     const base = imageUrl.split("?")[0];
     imageUrl = base;
@@ -29,7 +31,7 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: `${product.title} – Orion Diamonds`,
       description: product.description?.slice(0, 150) || "",
-      url: `https://oriondiamonds.in/product/${handle}`,
+      url: `${siteUrl}/product/${handle}`,
       type: "website",
       images: [
         {
