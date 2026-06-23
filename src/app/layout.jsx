@@ -24,7 +24,7 @@ export const metadata = {
     type: "website",
     images: [
       {
-        url: "https://www.oriondiamonds.in/nobglogo.png",
+        url: "https://www.oriondiamonds.in/og-image.png",
         width: 400,
         height: 100,
         alt: "Orion Diamonds",
